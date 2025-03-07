@@ -22,9 +22,13 @@ def test_numerical():
     print(f"Initial state: {initial_state}")
     
     # Resolve the paradox
-    result, steps, converged = resolver.resolve(initial_state)
+    paradox_state = resolver.resolve(initial_state)
     
     # Show results
+    result = paradox_state.value
+    steps = paradox_state.get_history()
+    converged = paradox_state.get_delta() is not None and paradox_state.get_delta() < resolver.convergence_threshold
+    
     print(f"Converged: {converged}")
     print(f"Final state: {result}")
     print(f"Steps taken: {len(steps)-1}")
@@ -53,7 +57,12 @@ def test_matrix():
     print(f"Initial state:\n{initial_state}")
     
     # Resolve the paradox
-    result, steps, converged = resolver.resolve(initial_state)
+    paradox_state = resolver.resolve(initial_state)
+    
+    # Show results
+    result = paradox_state.value
+    steps = paradox_state.get_history()
+    converged = paradox_state.get_delta() is not None and paradox_state.get_delta() < resolver.convergence_threshold
     
     # Show results
     print(f"Converged: {converged}")
