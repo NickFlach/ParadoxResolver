@@ -23,7 +23,7 @@ class RuleGenome:
     
     def __init__(self, 
                 rule_name: str,
-                components: List[str] = None,
+                components: Optional[List[str]] = None,
                 complexity: float = 1.0,
                 fitness: float = 0.0):
         """
@@ -36,7 +36,7 @@ class RuleGenome:
             fitness: Current fitness score for the rule
         """
         self.rule_name = rule_name
-        self.components = components or []
+        self.components = components if components is not None else []
         self.complexity = complexity
         self.fitness = fitness
         self.ancestry = []  # List of parent rule names
@@ -252,9 +252,15 @@ class RuleGenome:
                             result = -result
                     
                     elif operation == "transpose":
-                        # Transpose matrix
-                        if isinstance(result, np.ndarray) and len(result.shape) == 2:
-                            result = result.T
+                        # Transpose matrix (only for numpy arrays with 2 dimensions)
+                        if isinstance(result, np.ndarray):
+                            # Check if it's a 2D array before transposing
+                            if len(result.shape) == 2:
+                                result = result.T
+                        # For scalar values, no change
+                        elif isinstance(result, (int, float, bool)):
+                            # No change for scalar values
+                            pass
                     
                     elif operation == "negate":
                         # Logical negation for boolean or near-boolean values
@@ -335,7 +341,7 @@ class EvolutionaryEngine:
     """
     
     def __init__(self, 
-                seed_rules: Dict[str, Callable] = None,
+                seed_rules: Optional[Dict[str, Callable]] = None,
                 population_size: int = 20,
                 mutation_rate: float = 0.3,
                 crossover_rate: float = 0.7,
@@ -607,7 +613,7 @@ class EvolutionaryEngine:
             "history": history
         }
     
-    def _select_parent(self, exclude: RuleGenome = None) -> RuleGenome:
+    def _select_parent(self, exclude: Optional[RuleGenome] = None) -> RuleGenome:
         """
         Select a parent using tournament selection.
         
