@@ -93,12 +93,19 @@ class RuleGenome:
         new_name = f"evolved_{self.rule_name.split('_')[-1]}_{random.randint(100, 999)}"
         new_complexity = self.complexity * (1.0 + (random.random() - 0.5) * 0.2)  # +/- 10%
         
-        return RuleGenome(
+        new_genome = RuleGenome(
             rule_name=new_name,
             components=new_components,
             complexity=new_complexity,
             fitness=0.0  # Reset fitness
         )
+        
+        # Track ancestry
+        new_genome.ancestry = self.ancestry.copy()
+        new_genome.ancestry.append(self.rule_name)
+        new_genome.generation = self.generation + 1
+        
+        return new_genome
     
     def crossover(self, other: 'RuleGenome') -> 'RuleGenome':
         """
@@ -119,12 +126,19 @@ class RuleGenome:
         new_name = f"cross_{self.rule_name.split('_')[-1]}_{other.rule_name.split('_')[-1]}"
         new_complexity = (self.complexity + other.complexity) / 2.0
         
-        return RuleGenome(
+        new_genome = RuleGenome(
             rule_name=new_name,
             components=new_components,
             complexity=new_complexity,
             fitness=0.0  # Reset fitness
         )
+        
+        # Track ancestry from both parents
+        new_genome.ancestry = list(set(self.ancestry + other.ancestry))
+        new_genome.ancestry.extend([self.rule_name, other.rule_name])
+        new_genome.generation = max(self.generation, other.generation) + 1
+        
+        return new_genome
     
     def to_transformation_function(self) -> Callable[[Any], Any]:
         """
@@ -589,7 +603,8 @@ class EvolutionaryEngine:
             "avg_fitness": avg_fitness,
             "diversity": diversity,
             "generations": generations,
-            "population_size": self.population_size
+            "population_size": self.population_size,
+            "history": history
         }
     
     def _select_parent(self, exclude: RuleGenome = None) -> RuleGenome:
