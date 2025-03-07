@@ -74,6 +74,8 @@ class ParadoxCLI:
         meta_parser.add_argument("--config", help="JSON file with custom framework configuration")
         meta_parser.add_argument("--max-transitions", type=int, default=10,
                                help="Maximum phase transitions")
+        meta_parser.add_argument("--max-iterations", type=int, default=100,
+                               help="Maximum total iterations across all phases")
         meta_parser.add_argument("--output", help="Output file for results (JSON)")
         
         # Rules command
@@ -263,7 +265,8 @@ class ParadoxCLI:
         result = meta.resolve(
             paradox_input, 
             args.type,
-            max_phase_transitions=args.max_transitions
+            max_phase_transitions=args.max_transitions,
+            max_total_iterations=args.max_iterations
         )
         end_time = time.time()
         
