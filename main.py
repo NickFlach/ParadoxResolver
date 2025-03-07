@@ -21,14 +21,16 @@ def main():
     until an equilibrium state is reached.
     """)
     
-    # Header area with new Evolutionary OS announcement
+    # Header area with new features announcement
     st.info("""
-    **🧬 NEW: Evolutionary Engine Released!**
+    **🧬 NEW: Evolutionary Intelligence System**
     
-    We've developed a revolutionary approach that generates novel solutions through genetic programming:
+    We've developed revolutionary approaches that generate novel solutions through genetic programming and human-AI collaboration:
     
-    * [Evolutionary OS](/evolutionary_os) - Our new engine evolves transformation rules and creates emergent innovation
+    * [Interactive Evolution](/interactive_evolution) - Guide evolution with your own intuition and creativity
+    * [Evolutionary OS](/evolutionary_os) - Our engine that evolves transformation rules and creates emergent innovation
     * [Meta-Resolver Demo](/meta_resolver_demo) - Our solution to balance recursive resolution and informational expansion
+    * [API Documentation](/api_documentation) - For AI systems that want to integrate with Crypto_ParadoxOS
     """)
     
     with st.sidebar:
@@ -57,8 +59,10 @@ def main():
         st.markdown("---")
         st.markdown("### Advanced Features")
         st.markdown("""
-        * [Evolutionary OS](/evolutionary_os) - Discover our evolutionary engine that generates novel transformation rules
+        * [Interactive Evolution](/interactive_evolution) - Guide the evolution process with your intuition
+        * [Evolutionary OS](/evolutionary_os) - Discover our evolutionary engine that generates novel rules
         * [Meta-Resolver Demo](/meta_resolver_demo) - Explore our solution to the core paradox
+        * [API Documentation](/api_documentation) - Integration guide for AI systems
         """)
     
     # Main content area
