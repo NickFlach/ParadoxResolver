@@ -637,8 +637,27 @@ if st.session_state.evolved_meta:
     if st.button("Run Evolutionary Meta-Resolver"):
         with st.spinner("Processing with Evolutionary Meta-Resolver..."):
             try:
-                # Apply meta-resolution
+                # Debug info to understand the input
+                st.write("**Debug Info:**")
+                st.write(f"Input type: {input_type}")
+                st.write(f"Input value: {meta_current_test}")
+                st.write(f"Evolved meta phases: {list(evolved_meta.phases.keys())}")
+                
+                # Apply meta-resolution with safety checks
                 start_time = time.time()
+                
+                # Make sure the meta-resolver has phases defined
+                if not evolved_meta.phases:
+                    st.error("No phases defined in meta-resolver. Creating default phases...")
+                    evolved_meta.create_standard_framework()
+                
+                # Double-check initial phase
+                if not evolved_meta.initial_phase:
+                    first_phase = next(iter(evolved_meta.phases.keys()))
+                    st.warning(f"No initial phase set. Using '{first_phase}' as default.")
+                    evolved_meta.set_initial_phase(first_phase)
+                
+                # Run the resolution
                 result = evolved_meta.resolve(meta_current_test, input_type, max_phase_transitions=5)
                 end_time = time.time()
                 
@@ -703,8 +722,35 @@ if st.session_state.evolved_meta:
                 
             except Exception as e:
                 st.error(f"Error in meta-resolution: {str(e)}")
+                
+                # Show detailed information about the error
                 import traceback
                 st.code(traceback.format_exc())
+                
+                # Display additional troubleshooting information
+                st.subheader("Troubleshooting Information")
+                
+                # Check the meta-resolver state
+                st.write("**Meta-Resolver State:**")
+                st.write(f"- Has phases: {bool(evolved_meta.phases)}")
+                if evolved_meta.phases:
+                    st.write(f"- Number of phases: {len(evolved_meta.phases)}")
+                    st.write(f"- Phase names: {list(evolved_meta.phases.keys())}")
+                st.write(f"- Initial phase: {evolved_meta.initial_phase}")
+                
+                # Check input characteristics
+                st.write("**Input Characteristics:**")
+                st.write(f"- Input type: {input_type}")
+                st.write(f"- Input value type: {type(meta_current_test).__name__}")
+                
+                if input_type == "matrix" and hasattr(meta_current_test, 'shape'):
+                    st.write(f"- Matrix shape: {meta_current_test.shape}")
+                
+                # Suggest fixes
+                st.write("**Possible Solutions:**")
+                st.write("1. Try using a different input value")
+                st.write("2. Restart the app and try again")
+                st.write("3. Check if the meta-resolver is properly initialized")
 
 # Summary and Explanation
 st.header("How The Evolutionary Engine Works")
