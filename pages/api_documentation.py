@@ -325,7 +325,14 @@ with param_tabs[3]:
                 "components": ["normalize", "oscillate", "filter"],
                 "explanation": "This rule normalizes values, applies a sine wave transformation, and filters small values."
             },
-            # More rules would be listed here
+            {
+                "rule_id": "rule_789_v2",
+                "name": "Dynamic Reconstructor",
+                "parent_rules": ["rule_789"],
+                "fitness": 0.78,
+                "components": ["filter", "smooth", "reorganize"],
+                "explanation": "This rule filters noise, smooths values, and reorganizes the structure."
+            }
         ],
         "evolution_metrics": {
             "avg_fitness": 0.81,
@@ -397,7 +404,7 @@ code_tabs = st.tabs(["Python", "JavaScript", "Rust"])
 with code_tabs[0]:
     st.markdown("### Python Integration Example")
     
-    python_example = """
+    python_example = '''
 import requests
 import json
 
@@ -449,14 +456,14 @@ try:
     print(f"Iterations: {result['result']['iterations']}")
 except Exception as e:
     print(f"Error: {str(e)}")
-"""
+'''
     
     st.code(python_example, language="python")
 
 with code_tabs[1]:
     st.markdown("### JavaScript Integration Example")
     
-    js_example = """
+    js_example = '''
 // Using fetch API in modern JavaScript
 const API_BASE_URL = 'https://api.crypto-paradoxos.io/v1';
 const API_KEY = 'your_api_key_here';
@@ -545,14 +552,14 @@ async function runEvolution() {
 }
 
 runEvolution();
-"""
+'''
     
     st.code(js_example, language="javascript")
 
 with code_tabs[2]:
     st.markdown("### Rust Integration Example")
     
-    rust_example = """
+    rust_example = '''
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
