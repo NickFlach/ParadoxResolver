@@ -155,7 +155,7 @@ def main():
                 'paradox': example['paradox'],
                 'type': example['type']
             }
-            st.experimental_rerun()
+            st.rerun()
     
     with tabs[2]:
         st.header("About Crypto_ParadoxOS")
