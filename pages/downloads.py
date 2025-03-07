@@ -220,10 +220,7 @@ with tab1:
     Crypto_ParadoxOS can address complex challenges across multiple domains.
     """)
     
-    # Create a dummy whitepaper file
-    with open('crypto_paradoxos_whitepaper.pdf', 'w') as f:
-        f.write("This is a placeholder for the whitepaper PDF")
-    
+    # Use the existing whitepaper file
     st.markdown(get_download_link('crypto_paradoxos_whitepaper.pdf', 'Whitepaper (PDF)'), unsafe_allow_html=True)
 
 with tab2:
@@ -255,10 +252,7 @@ with tab2:
     researchers and developers to understand, reproduce, and extend the system.
     """)
     
-    # Create a dummy yellow paper file
-    with open('crypto_paradoxos_yellowpaper.pdf', 'w') as f:
-        f.write("This is a placeholder for the yellow paper PDF")
-    
+    # Use the existing yellow paper file
     st.markdown(get_download_link('crypto_paradoxos_yellowpaper.pdf', 'Yellow Paper (PDF)'), unsafe_allow_html=True)
 
 # Contact information

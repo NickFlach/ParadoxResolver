@@ -170,11 +170,11 @@ def main():
         example = example_paradoxes[selected_example]
         st.write(f"**Description**: {example['description']}")
         st.write(f"**Type**: {example['type']}")
-        st.write(f"**Paradox**: {example['paradox']}")
+        st.write(f"**Paradox**: {example['value']}")
         
         if st.button("Load Example"):
             st.session_state.example_loaded = {
-                'paradox': example['paradox'],
+                'paradox': example['value'],
                 'type': example['type']
             }
             st.rerun()

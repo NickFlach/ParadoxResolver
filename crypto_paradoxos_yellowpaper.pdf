@@ -1,0 +1,7 @@
+Crypto_ParadoxOS Yellow Paper
+
+This paper presents the formal specification and technical implementation details of Crypto_ParadoxOS, a recursive paradox-resolution system.
+
+We provide mathematical foundations for the transformation rules, convergence properties, and evolutionary mechanisms that drive the system.
+
+We introduce formal definitions for paradox states, transformation functions, and convergence criteria, along with proofs of termination and stability properties.
