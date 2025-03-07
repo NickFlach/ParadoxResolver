@@ -137,7 +137,7 @@ class TestCryptoParadoxAPI(unittest.TestCase):
         result = self.api.execute_job(job_id)
         
         # The result should include the effect of our custom rule
-        self.assertNotEqual(result["final_value"], 5.0)
+        self.assertNotEqual(result["result"]["final_value"], 5.0)
     
     def test_create_job(self):
         """Test job creation."""
@@ -189,16 +189,17 @@ class TestCryptoParadoxAPI(unittest.TestCase):
         
         # Verify job execution results
         self.assertIsInstance(result, dict)
-        self.assertIn("final_value", result)
-        self.assertIn("history", result)
-        self.assertIn("converged", result)
-        self.assertIn("processing_time", result)
+        self.assertIn("result", result)
+        self.assertIn("final_value", result["result"])
+        self.assertIn("history", result["result"])
+        self.assertIn("converged", result["result"])
+        self.assertIn("execution_time", result["result"])
         
         # Verify numeric result is different from input (transformed)
-        self.assertNotEqual(result["final_value"], 0.5)
+        self.assertNotEqual(result["result"]["final_value"], 0.5)
         
         # Verify history includes steps
-        self.assertGreater(len(result["history"]), 0)
+        self.assertGreater(len(result["result"]["history"]), 0)
         
         # Test execution of nonexistent job
         with self.assertRaises(ValueError):
@@ -218,10 +219,11 @@ class TestCryptoParadoxAPI(unittest.TestCase):
         
         # Check structure of results
         for result in [numerical_result, matrix_result, text_result]:
-            self.assertIn("final_value", result)
-            self.assertIn("history", result)
-            self.assertIn("converged", result)
-            self.assertIn("processing_time", result)
+            self.assertIn("result", result)
+            self.assertIn("final_value", result["result"])
+            self.assertIn("history", result["result"])
+            self.assertIn("converged", result["result"])
+            self.assertIn("execution_time", result["result"])
     
     def test_get_available_rules(self):
         """Test retrieving available rules."""
