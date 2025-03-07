@@ -7,11 +7,10 @@ recursive resolution (convergence) and informational expansion (divergence).
 """
 
 import numpy as np
-import time
-from typing import Any, Dict, List, Tuple, Callable, Optional, Union, Set
+from typing import Any, Dict, List, Tuple, Callable, Optional, Union
 
-from crypto_paradox_os import ParadoxState, TransformationRule, ParadoxResolver
-from crypto_paradox_api import CryptoParadoxAPI
+from paradox_resolver import ParadoxResolver
+from transformation_rules import get_available_rules
 
 class ResolutionPhase:
     """Represents a phase in the meta-resolution process."""
@@ -34,8 +33,8 @@ class ResolutionPhase:
         self.is_convergent = is_convergent
         self.max_iterations = max_iterations
         self.threshold = threshold
-        self.rules: List[str] = []
-        self.transition_conditions: Dict[str, Callable[[Any], bool]] = {}
+        self.rules = []
+        self.transitions = {}  # Maps target phase name to condition function
     
     def add_rule(self, rule_name: str) -> 'ResolutionPhase':
         """Add a rule to this phase and return self for chaining."""
@@ -56,9 +55,8 @@ class ResolutionPhase:
         Returns:
             Self for method chaining
         """
-        self.transition_conditions[target_phase] = condition
+        self.transitions[target_phase] = condition
         return self
-
 
 class MetaResolver:
     """
@@ -68,18 +66,16 @@ class MetaResolver:
     different phases based on state characteristics and transition conditions.
     """
     
-    def __init__(self, api: Optional[CryptoParadoxAPI] = None):
+    def __init__(self, api = None):
         """
         Initialize the meta-resolver.
         
         Args:
-            api: CryptoParadoxAPI instance (creates one if None)
+            api: API instance (unused in simplified implementation)
         """
-        self.api = api or CryptoParadoxAPI()
-        self.phases: Dict[str, ResolutionPhase] = {}
-        self.initial_phase: Optional[str] = None
-        self.phase_history: List[str] = []
-        self.visited_phases: Set[str] = set()
+        self.phases = {}
+        self.initial_phase = None
+        self.all_rules = get_available_rules()
     
     def add_phase(self, phase: ResolutionPhase) -> 'MetaResolver':
         """
@@ -92,9 +88,11 @@ class MetaResolver:
             Self for method chaining
         """
         self.phases[phase.name] = phase
-        # Set as initial phase if this is the first one
+        
+        # Set as initial phase if it's the first one
         if self.initial_phase is None:
             self.initial_phase = phase.name
+            
         return self
     
     def set_initial_phase(self, phase_name: str) -> 'MetaResolver':
@@ -109,6 +107,9 @@ class MetaResolver:
         """
         if phase_name in self.phases:
             self.initial_phase = phase_name
+        else:
+            raise ValueError(f"Phase '{phase_name}' does not exist")
+            
         return self
     
     def resolve(self, 
@@ -132,94 +133,77 @@ class MetaResolver:
         Returns:
             Dictionary containing resolution results with phase information
         """
-        if not self.initial_phase or not self.phases:
-            raise ValueError("No phases defined for meta-resolution")
-        
-        current_phase_name = self.initial_phase
+        # Initialize
         current_state = initial_state
-        phase_transitions = 0
+        current_phase_name = self.initial_phase
+        phase_history = [current_phase_name]
+        state_history = [current_state]
         total_iterations = 0
-        self.phase_history = [current_phase_name]
-        self.visited_phases = {current_phase_name}
+        phase_transitions = 0
         
-        start_time = time.time()
-        phase_results = []
-        
-        # Continue until we hit max transitions or cycle detection
+        # Main resolution loop
         while phase_transitions < max_phase_transitions:
+            # Get the current phase
             current_phase = self.phases[current_phase_name]
             
-            # Configure for this phase
-            config = {
-                "max_iterations": current_phase.max_iterations,
-                "convergence_threshold": current_phase.threshold,
-                "rules": current_phase.rules,
-                "phase_name": current_phase.name,
-                "is_convergent": current_phase.is_convergent
+            # Select rules for this phase
+            selected_rules = {
+                name: self.all_rules[name] 
+                for name in current_phase.rules 
+                if name in self.all_rules
             }
             
-            # Apply paradox resolution for this phase
-            phase_result = self.api.resolve_paradox(current_state, input_type, config)
+            if not selected_rules:
+                # Fallback to all rules if none specified
+                selected_rules = self.all_rules
             
-            # Get updated state and add phase results
-            result_data = phase_result["result"]
+            # Create a resolver for this phase
+            resolver = ParadoxResolver(
+                transformation_rules=selected_rules,
+                max_iterations=current_phase.max_iterations,
+                convergence_threshold=current_phase.threshold
+            )
             
-            # Extract final state based on what's available in the result
-            if "final_value" in result_data:
-                current_state = result_data["final_value"]
-            elif "final_state" in result_data:
-                current_state = result_data["final_state"]
-            else:
-                # If neither key exists, use the last state we had
-                pass
-                
-            total_iterations += result_data.get("iterations", 0)
+            # Execute this phase
+            result, steps, converged = resolver.resolve(current_state)
             
-            # Record phase results
-            phase_results.append({
-                "phase": current_phase.name,
-                "iterations": result_data.get("iterations", 0),
-                "converged": result_data.get("converged", False),
-                "is_convergent_phase": current_phase.is_convergent
-            })
+            # Update state and history
+            current_state = result
+            state_history.extend(steps[1:])  # Skip first step (duplicate of current_state)
+            total_iterations += len(steps) - 1
             
-            # Check transition conditions
+            # Check for transitions to other phases
             next_phase = None
-            for target_phase, condition in current_phase.transition_conditions.items():
+            for target, condition in current_phase.transitions.items():
                 if condition(current_state):
-                    next_phase = target_phase
+                    next_phase = target
                     break
             
-            # If no transition conditions met or we're at a final phase
-            if next_phase is None or next_phase == current_phase_name:
-                # We're done
-                break
+            # If no transition conditions met
+            if next_phase is None:
+                # If converged or diverged as expected, we're done
+                if converged == current_phase.is_convergent:
+                    break
+                    
+                # Otherwise, stay in the same phase for another cycle
+                continue
             
-            # Prepare for next phase
+            # Move to the next phase
             current_phase_name = next_phase
-            self.phase_history.append(current_phase_name)
-            self.visited_phases.add(current_phase_name)
+            phase_history.append(current_phase_name)
             phase_transitions += 1
-            
-            # Detect cycles
-            if self.phase_history.count(current_phase_name) > 2:
-                # We've entered a cycle, break out
-                break
         
-        end_time = time.time()
-        
-        # Prepare final results
-        return {
+        # Create result dictionary
+        result = {
             "final_state": current_state,
-            "input_type": input_type,
             "total_iterations": total_iterations,
             "phase_transitions": phase_transitions,
-            "phase_history": self.phase_history,
-            "phase_results": phase_results,
-            "execution_time": end_time - start_time,
-            "meta_converged": phase_transitions < max_phase_transitions
+            "phase_history": phase_history,
+            "converged": converged
         }
-
+        
+        return result
+    
     def create_standard_framework(self) -> 'MetaResolver':
         """
         Create a standard meta-resolution framework with predefined phases.
@@ -230,111 +214,74 @@ class MetaResolver:
         Returns:
             Self with configured phases
         """
-        # Initial convergence phase
-        convergence = ResolutionPhase(
-            "Initial Convergence", 
-            is_convergent=True,
-            max_iterations=10,
-            threshold=0.01
-        )
-        convergence.add_rule("Fixed-Point Iteration")
-        convergence.add_rule("Eigenvalue Stabilization")
-        
-        # Expansion phase to generate new information
-        expansion = ResolutionPhase(
-            "Information Expansion",
-            is_convergent=False,
-            max_iterations=5,
-            threshold=0.05
-        )
-        expansion.add_rule("Duality Inversion")
-        expansion.add_rule("Bayesian Update")
-        
-        # Refinement phase to integrate expanded information
-        refinement = ResolutionPhase(
-            "Integration Refinement",
-            is_convergent=True,
-            max_iterations=15,
-            threshold=0.001
-        )
-        refinement.add_rule("Fixed-Point Iteration")
-        refinement.add_rule("Recursive Normalization")
-        refinement.add_rule("Self-Reference Unwinding")
-        
-        # Final convergence phase
-        final_convergence = ResolutionPhase(
-            "Final Convergence",
-            is_convergent=True,
-            max_iterations=20,
-            threshold=0.0001
-        )
-        final_convergence.add_rule("Fixed-Point Iteration")
-        final_convergence.add_rule("Eigenvalue Stabilization")
-        final_convergence.add_rule("Constraint Satisfaction")
-        
-        # Configure transitions
-        # Initial convergence to expansion when approaching convergence
+        # Define phase transition conditions
         def near_convergence(state: Any) -> bool:
+            """Detect if we're approaching convergence."""
             if isinstance(state, (int, float)):
-                return abs(state - 1.0) < 0.1  # Near the fixed point
+                # Near a fixed point (1 or 0 in many cases)
+                return abs(state - round(state)) < 0.1
+            elif isinstance(state, np.ndarray):
+                # Near an identity, zero, or stable matrix
+                return np.max(np.abs(state)) < 0.1 or np.max(np.abs(state - np.eye(*state.shape))) < 0.1
             return False
-            
-        # Expansion to refinement after sufficient expansion
+        
         def sufficient_expansion(state: Any) -> bool:
-            # Simple heuristic for demonstration
-            return True  # Always transition after expansion phase
-            
-        # Refinement to final convergence when stability emerges
+            """Detect if we've expanded enough."""
+            if isinstance(state, (int, float)):
+                # Values expanding beyond typical range
+                return abs(state) > 2.0
+            elif isinstance(state, np.ndarray):
+                # Matrix elements expanding
+                return np.max(np.abs(state)) > 2.0
+            return True  # Default to allowing transition
+        
         def emerging_stability(state: Any) -> bool:
-            # Another simple transition rule
+            """Detect if stability is emerging."""
+            # This is a simplified check
+            if isinstance(state, (int, float)):
+                # Values in middle range often indicate stabilization
+                return 0.3 < abs(state) < 0.7
             return True
         
-        # Configure transitions
-        convergence.add_transition("Information Expansion", near_convergence)
-        expansion.add_transition("Integration Refinement", sufficient_expansion)
-        refinement.add_transition("Final Convergence", emerging_stability)
+        # Create phases
+        convergent = ResolutionPhase(
+            name="convergent",
+            is_convergent=True,
+            max_iterations=10,
+            threshold=0.001
+        )
+        convergent.add_rule("fixed_point_iteration")
+        convergent.add_rule("eigenvalue_stabilization")
+        convergent.add_rule("recursive_normalization")
+        convergent.add_transition("divergent", near_convergence)
         
-        # Add all phases
-        self.add_phase(convergence)
-        self.add_phase(expansion)
-        self.add_phase(refinement)
-        self.add_phase(final_convergence)
-        self.set_initial_phase("Initial Convergence")
+        divergent = ResolutionPhase(
+            name="divergent",
+            is_convergent=False,
+            max_iterations=5,
+            threshold=0.001
+        )
+        divergent.add_rule("duality_inversion")
+        divergent.add_rule("contradiction_resolution")
+        divergent.add_rule("self_reference_unwinding")
+        divergent.add_transition("exploration", sufficient_expansion)
+        
+        exploration = ResolutionPhase(
+            name="exploration",
+            is_convergent=False,
+            max_iterations=8,
+            threshold=0.001
+        )
+        exploration.add_rule("fuzzy_logic_transformation")
+        exploration.add_rule("bayesian_update")
+        exploration.add_transition("convergent", emerging_stability)
+        
+        # Add phases to resolver
+        self.add_phase(convergent)
+        self.add_phase(divergent)
+        self.add_phase(exploration)
+        
+        # Set initial phase
+        self.set_initial_phase("convergent")
         
         return self
-
-
-def demo_meta_resolver():
-    """Demonstrate the meta-resolver with a simple paradox."""
-    print("Crypto_ParadoxOS Meta-Resolver Demonstration")
-    print("============================================")
-    
-    # Create a meta-resolver with the standard framework
-    meta = MetaResolver()
-    meta.create_standard_framework()
-    
-    # Test with a numerical paradox (fixed point equation x = 1/x)
-    test_value = 0.5
-    
-    print(f"\nResolving numeric paradox with initial value: {test_value}")
-    result = meta.resolve(test_value, "numerical")
-    
-    print("\nMeta-Resolution Results:")
-    print(f"Final state: {result['final_state']}")
-    print(f"Total iterations: {result['total_iterations']}")
-    print(f"Phase transitions: {result['phase_transitions']}")
-    print(f"Phase history: {' -> '.join(result['phase_history'])}")
-    print(f"Meta-converged: {result['meta_converged']}")
-    print(f"Execution time: {result['execution_time']:.4f} seconds")
-    
-    print("\nPhase-by-Phase Results:")
-    for phase in result["phase_results"]:
-        print(f"- {phase['phase']}: {'Converged' if phase['converged'] else 'Did not converge'} "
-              f"after {phase['iterations']} iterations "
-              f"({'Convergent' if phase['is_convergent_phase'] else 'Expansive'} phase)")
-    
-    print("\nMeta-Resolver Demonstration Complete")
-
-
-if __name__ == "__main__":
-    demo_meta_resolver()

@@ -1,6 +1,14 @@
+#!/usr/bin/env python3
+"""
+Crypto_ParadoxOS Transformation Rules
+
+This module defines the standard transformation rules used by the resolver
+to transform paradoxical states toward an equilibrium.
+"""
+
 import numpy as np
-import re
-from typing import Any, Dict, Callable, Union, List
+import math
+from typing import Any, Dict, Callable, List, Tuple, Union, Optional
 
 def get_available_rules() -> Dict[str, Callable]:
     """
@@ -9,14 +17,14 @@ def get_available_rules() -> Dict[str, Callable]:
     Each rule is a function that takes a state and returns a transformed state.
     """
     return {
-        "Fixed-Point Iteration": fixed_point_iteration,
-        "Contradiction Resolution": contradiction_resolution,
-        "Self-Reference Unwinding": self_reference_unwinding,
-        "Eigenvalue Stabilization": eigenvalue_stabilization,
-        "Fuzzy Logic Transformation": fuzzy_logic_transformation,
-        "Duality Inversion": duality_inversion,
-        "Bayesian Update": bayesian_update,
-        "Recursive Normalization": recursive_normalization
+        "fixed_point_iteration": fixed_point_iteration,
+        "contradiction_resolution": contradiction_resolution,
+        "self_reference_unwinding": self_reference_unwinding,
+        "eigenvalue_stabilization": eigenvalue_stabilization,
+        "fuzzy_logic_transformation": fuzzy_logic_transformation,
+        "duality_inversion": duality_inversion,
+        "bayesian_update": bayesian_update,
+        "recursive_normalization": recursive_normalization
     }
 
 def fixed_point_iteration(state: Any) -> Any:
@@ -25,49 +33,53 @@ def fixed_point_iteration(state: Any) -> Any:
     
     Works with numerical values and equations of the form x = f(x)
     """
+    # For numerical values, apply fixed-point iteration directly
     if isinstance(state, (int, float)):
-        # For simple numerical values, apply a dampened averaging transformation
-        # This helps achieve convergence for many recursive equations
-        
-        # For this specific test case where we're looking for fixed point of x = 1/x,
-        # the fixed point should be 1.0, as 1.0 = 1.0/1.0
-        # Use a stronger dampening factor to ensure faster convergence
-        dampening_factor = 0.5
-        
-        # Calculate 1/x (this is the function we're finding the fixed point for)
-        inverse_value = 1.0 / state if state != 0 else 1.0
-        
-        # Weighted average approach to converge to the fixed point
-        return state * (1 - dampening_factor) + dampening_factor * inverse_value
+        # Apply a damping factor for stability
+        if state != 0:
+            return 0.5 * (state + 1/state)
+        else:
+            return 0.5  # Default value if state is 0
     
-    elif isinstance(state, str) and '=' in state:
-        # For equation strings, we'll do a symbolic transformation
-        # This is a simplified approach; a proper implementation would use sympy
-        parts = state.split('=')
-        if len(parts) == 2 and 'x' in parts[1]:
-            # If it's a form like "x = 1/x", modify it to approach fixed point
-            # Here we're simulating a mathematical transformation
-            if "1/x" in parts[1]:
-                return "x = (x + 1/x)/2"  # Averaging x and 1/x for better convergence
-            elif "x^2" in parts[1] or "x**2" in parts[1]:
-                return "x = (x + x^2/2)/2"  # Modified iteration for quadratic terms
-            else:
-                return state  # Return unchanged if we don't have a specific rule
-        return state
+    # For equation strings (simplified parsing)
+    elif isinstance(state, str) and "=" in state:
+        try:
+            # Parse equation of form "x = expression"
+            parts = state.split("=", 1)
+            var_name = parts[0].strip()
+            expression = parts[1].strip()
+            
+            # Create a simple evaluator (this is a simplified implementation)
+            # A full implementation would use a proper symbolic math library
+            local_vars = {"x": 0.5}  # Default starting value
+            
+            # Very simple evaluation (not secure for production)
+            # A real implementation would use a safe evaluation method
+            result = eval(expression, {"__builtins__": {}}, local_vars)
+            
+            # Return the result or updated equation
+            return result
+        except Exception:
+            # If parsing fails, return unchanged
+            return state
     
+    # For matrices, apply fixed-point iteration to each element
     elif isinstance(state, np.ndarray):
-        # For matrices, apply a specialized fixed-point iteration
-        # This could be a form of power iteration or other matrix fixed-point algorithm
-        if len(state.shape) == 2 and state.shape[0] == state.shape[1]:
-            # Square matrix case
-            identity = np.eye(state.shape[0])
-            transformed = 0.5 * (state + identity)  # Move towards identity matrix
-            # Normalize to prevent explosion
-            if np.max(np.abs(transformed)) > 0:
-                transformed = transformed / np.max(np.abs(transformed))
-            return transformed
+        # Apply element-wise transformation (avoiding division by zero)
+        result = np.zeros_like(state)
+        for i in range(state.shape[0]):
+            for j in range(state.shape[1]):
+                if state[i, j] != 0:
+                    result[i, j] = 0.5 * (state[i, j] + 1/state[i, j])
+                else:
+                    result[i, j] = 0.5
+        return result
     
-    # Default: return state unchanged
+    # For lists of numbers, apply fixed-point iteration to each element
+    elif isinstance(state, list) and all(isinstance(x, (int, float)) for x in state):
+        return [0.5 * (x + (1/x if x != 0 else 1)) for x in state]
+    
+    # Return unchanged for unsupported types
     return state
 
 def contradiction_resolution(state: Any) -> Any:
@@ -76,245 +88,240 @@ def contradiction_resolution(state: Any) -> Any:
     
     Works with text-based paradoxes and boolean expressions.
     """
+    # For text-based contradictions
     if isinstance(state, str):
-        # Handle classic text paradoxes
-        if "this statement is false" in state.lower():
-            # Transform to a non-contradictory statement about self-reference
-            return "This statement refers to itself and has an undefined truth value."
+        # Check for common contradictory phrases
+        contradictions = [
+            ("This statement is false", "This statement is neither true nor false"),
+            ("The following is true: the previous is false", 
+             "The following and previous statements exist in a quantum superposition"),
+            ("I am lying", "I am expressing a paradoxical statement"),
+            ("Everything I say is false", "Some things I say may be self-referential")
+        ]
         
-        if "i am lying" in state.lower() or "all statements are false" in state.lower():
-            # Transform to avoid the direct contradiction
-            return "Some statements can be false while others are true."
+        for original, resolution in contradictions:
+            if original.lower() in state.lower():
+                return state.replace(original, resolution)
         
-        # Detect and resolve direct contradictions like "A and not A"
-        contradiction_pattern = r'\b(\w+)\b.+\bnot\b.+\b\1\b'
-        if re.search(contradiction_pattern, state.lower()):
-            return "This contains mutually exclusive propositions that can be resolved through context-dependent evaluation."
+        return state
     
-    elif isinstance(state, dict) and 'value' in state and 'negation' in state:
-        # For structured logical representations
-        # If we have a direct contradiction where value == negation
-        if state['value'] == state['negation']:
-            # Introduce uncertainty/fuzziness
-            return {
-                'value': 0.5,
-                'negation': 0.5,
-                'uncertain': True
-            }
+    # For boolean values, apply fuzzy logic (represented as a value between 0 and 1)
+    elif isinstance(state, bool):
+        return 0.5  # Representing a middle state between True and False
     
-    # Return state unchanged if not a recognized contradiction
+    # For numerical values close to contradictory states, apply smoothing
+    elif isinstance(state, (int, float)):
+        # If near -1 or oscillating between positive and negative, apply transformation
+        if abs(state) - 1 < 0.1:
+            return state * 0.8  # Dampen the oscillation
+        return state
+    
+    # Return unchanged for unsupported types
     return state
 
 def self_reference_unwinding(state: Any) -> Any:
     """
     Resolves self-referential statements or structures by unwinding one level.
     """
+    # For string-based self-references
     if isinstance(state, str):
-        # Handle self-referential text statements
-        if "this statement" in state.lower() or "itself" in state.lower():
-            # Unwind by making the self-reference explicit
-            return "A statement about statements can be evaluated in a meta-linguistic framework."
+        # Check for self-referential constructs
+        self_ref_patterns = [
+            ("this statement", "the previous statement"),
+            ("I am", "It is"),
+            ("myself", "itself")
+        ]
         
-        # For nested self-reference, simplify
-        if state.count("refers to") > 1:
-            return "Multiple levels of self-reference can be reduced to a single level plus context."
+        for pattern, replacement in self_ref_patterns:
+            if pattern in state.lower():
+                return state.replace(pattern, replacement)
+        
+        return state
     
-    elif isinstance(state, dict) and 'refers_to' in state:
-        # For structured self-reference
-        if state.get('refers_to') == 'self':
-            # Unwind one level
-            return {
-                'content': state.get('content', ''),
-                'refers_to': 'content',
-                'level': state.get('level', 1) - 1
-            }
+    # For recursive list structures
+    elif isinstance(state, list):
+        # If the list contains itself (simplified check)
+        str_repr = str(state)
+        if str_repr in str(state):
+            # Create a flattened version
+            result = []
+            for item in state:
+                if isinstance(item, list):
+                    result.extend(item)
+                else:
+                    result.append(item)
+            return result
+        return state
     
-    elif isinstance(state, list) and state and state[0] == state:
-        # A list that contains itself as the first element
-        # Create a new list without the self-reference
-        return state[1:] if len(state) > 1 else []
-    
+    # Return unchanged for unsupported types
     return state
 
 def eigenvalue_stabilization(state: Any) -> Any:
     """
     Stabilizes matrix-based paradoxes using eigenvalue/eigenvector techniques.
     """
+    # For matrices, apply eigenvalue stabilization
     if isinstance(state, np.ndarray) and len(state.shape) == 2:
-        # Only apply to square matrices
-        if state.shape[0] == state.shape[1]:
-            try:
-                # Calculate eigenvalues and eigenvectors
-                eigenvalues, eigenvectors = np.linalg.eig(state)
-                
-                # Find the dominant eigenvalue
-                dominant_idx = np.argmax(np.abs(eigenvalues))
-                dominant_value = eigenvalues[dominant_idx]
-                
-                # Normalize the eigenvalue for stability
-                normalized_eigenvalues = eigenvalues / max(1, np.max(np.abs(eigenvalues)))
-                
-                # Reconstruct a more stable matrix
-                reconstructed = np.zeros_like(state)
-                for i, (val, vec) in enumerate(zip(normalized_eigenvalues, eigenvectors.T)):
-                    # Project along eigenvectors but with normalized eigenvalues
-                    outer_product = np.outer(vec, np.conj(vec))
-                    reconstructed += val * outer_product
-                
-                # Ensure the matrix is real if it started real
-                if np.isrealobj(state):
-                    reconstructed = np.real(reconstructed)
-                
-                return reconstructed
-            except np.linalg.LinAlgError:
-                # If eigendecomposition fails, apply a simpler stabilization
-                return 0.9 * state + 0.1 * np.eye(state.shape[0])
+        try:
+            # Check if square matrix
+            if state.shape[0] == state.shape[1]:
+                # Compute eigendecomposition
+                try:
+                    eigenvalues, eigenvectors = np.linalg.eig(state)
+                    
+                    # Stabilize eigenvalues (bound magnitude)
+                    max_mag = 1.0
+                    stabilized_eigenvalues = np.array([
+                        (ev/abs(ev)) * min(abs(ev), max_mag) if ev != 0 else 0
+                        for ev in eigenvalues
+                    ])
+                    
+                    # Reconstruct matrix
+                    diag_eigenvalues = np.diag(stabilized_eigenvalues)
+                    inv_eigenvectors = np.linalg.inv(eigenvectors)
+                    stabilized_matrix = eigenvectors @ diag_eigenvalues @ inv_eigenvectors
+                    
+                    # Return real part if result is complex
+                    if np.iscomplex(stabilized_matrix).any():
+                        return np.real(stabilized_matrix)
+                    return stabilized_matrix
+                except np.linalg.LinAlgError:
+                    # Fallback for non-diagonalizable matrices
+                    return 0.5 * (state + state.T)
+        except Exception:
+            pass
     
+    # For other numerical arrays, apply normalization
+    elif isinstance(state, np.ndarray):
+        # Normalize to [-1, 1] range
+        max_abs = np.max(np.abs(state))
+        if max_abs > 0:
+            return state / max_abs
+        return state
+    
+    # Return unchanged for unsupported types
     return state
 
 def fuzzy_logic_transformation(state: Any) -> Any:
     """
     Applies many-valued logic to resolve binary contradictions.
     """
-    if isinstance(state, (int, float)) and 0 <= state <= 1:
-        # Apply a sigmoidal transformation to push values away from 0.5
-        # and toward 0 or 1, but never reaching the extremes
-        if state == 0.5:
-            # Pure contradiction remains unchanged
-            return state
-        
-        # This function creates a soft threshold effect
-        transformed = 1 / (1 + np.exp(-10 * (state - 0.5)))
-        return transformed
+    # For boolean values, convert to fuzzy logic value
+    if isinstance(state, bool):
+        return 0.5 if state else 0.5
     
-    elif isinstance(state, str):
-        # Apply fuzzy logic principles to text paradoxes
-        if "true and false" in state.lower() or "contradiction" in state.lower():
-            return "This can be understood as partially true in a fuzzy logic system where truth values exist on a spectrum."
+    # For numeric values, apply a fuzzy sigmoid transformation
+    elif isinstance(state, (int, float)):
+        return 1 / (1 + math.exp(-state))  # Sigmoid function
     
-    elif isinstance(state, dict) and 'truth_value' in state:
-        # For explicit truth value representations
-        truth = state['truth_value']
-        if isinstance(truth, (int, float)) and 0 <= truth <= 1:
-            # If it's close to contradictory (0.5), push it slightly away
-            if 0.4 <= truth <= 0.6:
-                direction = 1 if truth >= 0.5 else 0
-                new_truth = 0.5 + (0.2 * (direction - 0.5))
-                state['truth_value'] = new_truth
-                state['fuzzy'] = True
-            return state
+    # For arrays, apply element-wise
+    elif isinstance(state, np.ndarray):
+        return 1 / (1 + np.exp(-state))
     
+    # For lists of numbers
+    elif isinstance(state, list) and all(isinstance(x, (int, float)) for x in state):
+        return [1 / (1 + math.exp(-x)) for x in state]
+    
+    # Return unchanged for unsupported types
     return state
 
 def duality_inversion(state: Any) -> Any:
     """
     Resolves paradoxes by inverting dualities and finding the complementary perspective.
     """
+    # For numeric values, reflect around 0.5
     if isinstance(state, (int, float)):
-        # Invert numerical values, with special handling for [0,1] range
         if 0 <= state <= 1:
-            return 1 - state
-        else:
-            # For general numbers, apply a reciprocal transformation with dampening
-            dampening = 0.3
-            return (1 - dampening) * state + dampening * (1 / (1 + abs(state)))
+            return 1 - state  # Invert within unit interval
+        return -state  # Otherwise just negate
     
-    elif isinstance(state, str):
-        # Invert dualistic concepts in text
-        opposites = {
-            "true": "false", "false": "true",
-            "yes": "no", "no": "yes",
-            "all": "some", "none": "some",
-            "always": "sometimes", "never": "sometimes"
-        }
-        
-        # Check for presence of opposites and replace with middle ground
-        lower_state = state.lower()
-        for word, opposite in opposites.items():
-            if word in lower_state and opposite in lower_state:
-                # Replace the dualistic opposition with a middle ground
-                pattern = r'\b(' + word + r'|' + opposite + r')\b'
-                middle_grounds = {"true/false": "contextual", "yes/no": "conditional", 
-                              "all/some": "qualified", "always/never": "situational"}
-                
-                key = f"{word}/{opposite}"
-                replacement = middle_grounds.get(key, "nuanced")
-                
-                return re.sub(pattern, replacement, state, flags=re.IGNORECASE)
+    # For boolean values, invert
+    elif isinstance(state, bool):
+        return not state
     
-    elif isinstance(state, np.ndarray):
-        # For matrices, invert in a way that preserves structure
-        # Use the complement relative to the identity matrix
-        if len(state.shape) == 2 and state.shape[0] == state.shape[1]:
-            identity = np.eye(state.shape[0])
-            return identity - state * 0.5  # Dampened inversion
+    # For arrays in [0,1], invert
+    elif isinstance(state, np.ndarray) and np.all((0 <= state) & (state <= 1)):
+        return 1 - state
     
+    # For lists of values in [0,1]
+    elif (isinstance(state, list) and 
+          all(isinstance(x, (int, float)) for x in state) and
+          all(0 <= x <= 1 for x in state)):
+        return [1 - x for x in state]
+    
+    # Return unchanged for unsupported types
     return state
 
 def bayesian_update(state: Any) -> Any:
     """
     Applies Bayesian inference principles to update probabilities in paradoxical states.
     """
+    # For values in [0,1] representing probabilities
     if isinstance(state, (int, float)) and 0 <= state <= 1:
-        # Interpret as a probability and update with a prior of 0.5
-        prior = 0.5
-        # Simple Bayesian update formula with a neutral likelihood
-        return (state * prior) / (state * prior + (1 - state) * (1 - prior))
+        # Apply a Bayesian update with a neutral likelihood
+        prior = state
+        likelihood_ratio = 1.0  # Neutral evidence
+        posterior = (prior * likelihood_ratio) / ((prior * likelihood_ratio) + (1 - prior))
+        
+        # Mix with original to create a smooth transition
+        alpha = 0.3  # Mixing parameter
+        return alpha * posterior + (1 - alpha) * prior
     
-    elif isinstance(state, list) and all(isinstance(x, (int, float)) for x in state):
-        # For lists of probabilities, normalize
-        if any(x < 0 for x in state):
-            # Handle negative values by shifting
-            min_val = min(state)
-            shifted = [x - min_val for x in state]
-            total = sum(shifted)
-            return [x / total if total > 0 else 1.0 / len(state) for x in shifted]
-        else:
-            total = sum(state)
-            return [x / total if total > 0 else 1.0 / len(state) for x in state]
+    # For arrays of probabilities
+    elif (isinstance(state, np.ndarray) and 
+          np.all((0 <= state) & (state <= 1))):
+        # Apply element-wise update
+        prior = state
+        likelihood_ratio = np.ones_like(state)  # Neutral evidence
+        posterior = (prior * likelihood_ratio) / ((prior * likelihood_ratio) + (1 - prior))
+        
+        # Mix with original
+        alpha = 0.3
+        return alpha * posterior + (1 - alpha) * prior
     
-    elif isinstance(state, dict) and all(isinstance(state.get(k), (int, float)) for k in state):
-        # For dictionaries mapping to probabilities
-        values = list(state.values())
-        if all(0 <= x <= 1 for x in values):
-            # Ensure they sum to 1 as valid probabilities
-            total = sum(values)
-            if total > 0:
-                return {k: v / total for k, v in state.items()}
+    # For lists of probabilities
+    elif (isinstance(state, list) and 
+          all(isinstance(x, (int, float)) for x in state) and
+          all(0 <= x <= 1 for x in state)):
+        
+        # Apply element-wise update
+        result = []
+        for prior in state:
+            likelihood_ratio = 1.0
+            posterior = (prior * likelihood_ratio) / ((prior * likelihood_ratio) + (1 - prior))
+            alpha = 0.3
+            result.append(alpha * posterior + (1 - alpha) * prior)
+        
+        return result
     
+    # Return unchanged for unsupported types
     return state
 
 def recursive_normalization(state: Any) -> Any:
     """
     Normalizes values while preserving the structure of complex nested states.
     """
+    # For single numeric values
     if isinstance(state, (int, float)):
-        # Simple sigmoid normalization for numerical values
-        return 1 / (1 + np.exp(-state))
+        # Normalize to [-1, 1] range using tanh
+        return math.tanh(state)
     
+    # For numpy arrays
     elif isinstance(state, np.ndarray):
-        # Normalize array values
-        if np.size(state) > 0:
-            abs_max = np.max(np.abs(state))
-            if abs_max > 0:
-                return state / abs_max
+        # Normalize using tanh for bounded output
+        return np.tanh(state)
     
+    # For lists of numbers
+    elif isinstance(state, list) and all(isinstance(x, (int, float)) for x in state):
+        return [math.tanh(x) for x in state]
+    
+    # For nested lists, apply recursively (simplified)
     elif isinstance(state, list):
-        # Recursively normalize lists
-        if all(isinstance(x, (int, float)) for x in state):
-            # For numerical lists, scale to [0,1] range
-            min_val = min(state) if state else 0
-            max_val = max(state) if state else 1
-            if max_val > min_val:
-                return [(x - min_val) / (max_val - min_val) for x in state]
-            else:
-                return [0.5 for _ in state]
-        else:
-            # For mixed type lists, recursively apply normalization
-            return [recursive_normalization(item) for item in state]
+        return [
+            recursive_normalization(item) if isinstance(item, (list, int, float))
+            else item
+            for item in state
+        ]
     
-    elif isinstance(state, dict):
-        # Recursively normalize dictionary values
-        return {k: recursive_normalization(v) for k, v in state.items()}
-    
+    # Return unchanged for unsupported types
     return state

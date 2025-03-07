@@ -46,29 +46,29 @@ with col1:
     st.subheader("Windows CLI")
     st.markdown("""
     - Compatible with Windows 10/11
-    - Includes all dependencies
-    - Simple installation wizard
+    - Requires Python 3.8+ with numpy and matplotlib
+    - Simple command-line interface
     """)
     
-    # Create a dummy Windows CLI binary file
-    with open('paradox_cli_windows.exe', 'w') as f:
-        f.write("This is a placeholder for the Windows CLI binary")
-    
+    # Use the actual Windows CLI file
     st.markdown(get_download_link('paradox_cli_windows.exe', 'Windows CLI (64-bit)'), unsafe_allow_html=True)
+    
+    # Also offer the Python script version
+    st.markdown(get_download_link('paradox_cli.py', 'Python Script (cross-platform)'), unsafe_allow_html=True)
 
 with col2:
     st.subheader("Linux CLI")
     st.markdown("""
     - Compatible with major Linux distributions
-    - Packaged with all dependencies
-    - Simple installation script
+    - Requires Python 3.8+ with numpy and matplotlib
+    - Simple installation script included
     """)
     
-    # Create a dummy Linux CLI binary file
-    with open('paradox_cli_linux', 'w') as f:
-        f.write("This is a placeholder for the Linux CLI binary")
-    
+    # Use the actual Linux CLI file
     st.markdown(get_download_link('paradox_cli_linux', 'Linux CLI (64-bit)'), unsafe_allow_html=True)
+    
+    # Also offer the shell script
+    st.markdown(get_download_link('paradox_cli.sh', 'Bash Script (Linux/macOS)'), unsafe_allow_html=True)
 
 # Usage instructions
 st.subheader("CLI Usage")

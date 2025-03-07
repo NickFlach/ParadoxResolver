@@ -7,14 +7,12 @@ novel transformation rules and resolution strategies through recursive
 self-modification and genetic programming techniques.
 """
 
-import numpy as np
-import time
 import random
-import copy
-from typing import Any, Dict, List, Tuple, Callable, Optional, Union, Set
+import math
+import numpy as np
+from typing import Any, Dict, List, Tuple, Callable, Optional, Union
 
-from crypto_paradox_os import ParadoxState, TransformationRule
-from meta_resolver import MetaResolver, ResolutionPhase
+from meta_resolver import MetaResolver
 
 class RuleGenome:
     """
@@ -41,9 +39,18 @@ class RuleGenome:
         self.components = components or []
         self.complexity = complexity
         self.fitness = fitness
-        self.generation = 0
-        self.ancestry = []
         
+        # Initialize with default components if empty
+        if not self.components:
+            self.components = [
+                "add", "subtract", "multiply", "divide",
+                "sin", "cos", "exp", "log", "tanh",
+                "normalize", "clip", "invert", "reflect"
+            ]
+            # Randomly select a subset of components
+            random.shuffle(self.components)
+            self.components = self.components[:random.randint(2, 5)]
+    
     def mutate(self, mutation_rate: float = 0.2) -> 'RuleGenome':
         """
         Create a mutated copy of this genome.
@@ -54,49 +61,42 @@ class RuleGenome:
         Returns:
             New mutated RuleGenome
         """
-        # Create a copy of the current genome
-        new_genome = copy.deepcopy(self)
-        new_genome.generation = self.generation + 1
-        new_genome.ancestry = self.ancestry + [self.rule_name]
+        # Copy components
+        new_components = self.components.copy()
         
-        # Possible operations for mutation
-        operations = [
-            "add_component",
-            "remove_component",
-            "modify_component",
-            "reorder_components"
+        # Possible operations
+        all_ops = [
+            "add", "subtract", "multiply", "divide", 
+            "sin", "cos", "exp", "log", "tanh",
+            "normalize", "clip", "invert", "reflect",
+            "transpose", "negate", "absolute", "square",
+            "smooth", "dampen", "amplify", "stabilize"
         ]
         
-        # Apply random mutations based on mutation rate
+        # Mutate by adding, removing, or replacing components
+        for i in range(len(new_components)):
+            if random.random() < mutation_rate:
+                # Replace with a random operation
+                new_components[i] = random.choice(all_ops)
+        
+        # Occasionally add a new component
         if random.random() < mutation_rate:
-            operation = random.choice(operations)
-            
-            if operation == "add_component" and len(new_genome.components) < 10:
-                new_component = random.choice(PRIMITIVE_OPERATIONS)
-                position = random.randint(0, len(new_genome.components))
-                new_genome.components.insert(position, new_component)
-                new_genome.complexity += 0.1
-                
-            elif operation == "remove_component" and len(new_genome.components) > 1:
-                position = random.randint(0, len(new_genome.components) - 1)
-                new_genome.components.pop(position)
-                new_genome.complexity = max(0.1, new_genome.complexity - 0.1)
-                
-            elif operation == "modify_component" and new_genome.components:
-                position = random.randint(0, len(new_genome.components) - 1)
-                new_genome.components[position] = random.choice(PRIMITIVE_OPERATIONS)
-                
-            elif operation == "reorder_components" and len(new_genome.components) > 1:
-                random.shuffle(new_genome.components)
+            new_components.append(random.choice(all_ops))
         
-        # Generate a new name based on ancestry and mutation
-        prefix = self.rule_name.split("_v")[0] if "_v" in self.rule_name else self.rule_name
-        new_genome.rule_name = f"{prefix}_v{new_genome.generation}"
+        # Occasionally remove a component (if more than 1)
+        if len(new_components) > 1 and random.random() < mutation_rate:
+            new_components.pop(random.randrange(len(new_components)))
         
-        # Reset fitness as it needs to be re-evaluated
-        new_genome.fitness = 0.0
+        # Create new genome with mutated components
+        new_name = f"evolved_{self.rule_name.split('_')[-1]}_{random.randint(100, 999)}"
+        new_complexity = self.complexity * (1.0 + (random.random() - 0.5) * 0.2)  # +/- 10%
         
-        return new_genome
+        return RuleGenome(
+            rule_name=new_name,
+            components=new_components,
+            complexity=new_complexity,
+            fitness=0.0  # Reset fitness
+        )
     
     def crossover(self, other: 'RuleGenome') -> 'RuleGenome':
         """
@@ -108,42 +108,21 @@ class RuleGenome:
         Returns:
             New RuleGenome resulting from crossover
         """
-        # Create a new genome
-        child = RuleGenome(
-            rule_name=f"Hybrid_{self.rule_name}_{other.rule_name}",
-            complexity=(self.complexity + other.complexity) / 2
+        # Simple one-point crossover
+        crossover_point = random.randint(1, min(len(self.components), len(other.components)) - 1)
+        
+        new_components = self.components[:crossover_point] + other.components[crossover_point:]
+        
+        # Create new genome with crossed components
+        new_name = f"cross_{self.rule_name.split('_')[-1]}_{other.rule_name.split('_')[-1]}"
+        new_complexity = (self.complexity + other.complexity) / 2.0
+        
+        return RuleGenome(
+            rule_name=new_name,
+            components=new_components,
+            complexity=new_complexity,
+            fitness=0.0  # Reset fitness
         )
-        
-        # Combine components from both parents
-        child.generation = max(self.generation, other.generation) + 1
-        child.ancestry = list(set(self.ancestry + other.ancestry + [self.rule_name, other.rule_name]))
-        
-        # Perform crossover of components
-        if not self.components or not other.components:
-            # If either parent has no components, use the other parent's components
-            child.components = self.components or other.components or []
-        elif len(self.components) <= 1 or len(other.components) <= 1:
-            # If either parent has only one component, combine them
-            child.components = self.components + other.components
-        else:
-            # Safe single-point crossover
-            max_point = min(len(self.components), len(other.components)) - 1
-            if max_point < 1:  # Ensure we don't try to get a random int in empty range
-                # Just combine components if we can't do proper crossover
-                child.components = self.components + other.components
-            else:
-                crossover_point = random.randint(1, max_point)
-                child.components = self.components[:crossover_point] + other.components[crossover_point:]
-        
-        # Generate a new name based on ancestry
-        parent_prefixes = []
-        for parent in [self.rule_name, other.rule_name]:
-            prefix = parent.split("_v")[0] if "_v" in parent else parent
-            parent_prefixes.append(prefix)
-            
-        child.rule_name = f"{'_'.join(parent_prefixes)}_v{child.generation}"
-        
-        return child
     
     def to_transformation_function(self) -> Callable[[Any], Any]:
         """
@@ -152,32 +131,184 @@ class RuleGenome:
         Returns:
             A function that applies the rule to a state
         """
-        if not self.components:
-            # Default identity transformation if no components
-            return lambda x: x
-        
         def transformation_function(state: Any) -> Any:
             """Apply the compiled transformation rule to a state."""
-            current_state = state
+            result = state
             
-            for component in self.components:
-                # Apply each component in sequence
-                op_func = OPERATION_FUNCTIONS.get(component)
-                if op_func:
-                    try:
-                        current_state = op_func(current_state)
-                    except Exception:
-                        # If any operation fails, skip it and continue
-                        pass
+            for operation in self.components:
+                try:
+                    if operation == "add":
+                        # Add a small constant
+                        if isinstance(result, (int, float)):
+                            result += 0.1
+                        elif isinstance(result, np.ndarray):
+                            result += 0.1
+                    
+                    elif operation == "subtract":
+                        # Subtract a small constant
+                        if isinstance(result, (int, float)):
+                            result -= 0.1
+                        elif isinstance(result, np.ndarray):
+                            result -= 0.1
+                    
+                    elif operation == "multiply":
+                        # Multiply by a constant
+                        if isinstance(result, (int, float)):
+                            result *= 0.95
+                        elif isinstance(result, np.ndarray):
+                            result *= 0.95
+                    
+                    elif operation == "divide":
+                        # Divide by a constant (safely)
+                        if isinstance(result, (int, float)):
+                            if result != 0:
+                                result = result / 1.05
+                        elif isinstance(result, np.ndarray):
+                            # Avoid division by zero
+                            result = result / (1.05 + 1e-10 * (np.abs(result) < 1e-10))
+                    
+                    elif operation == "sin":
+                        # Apply sine function
+                        if isinstance(result, (int, float)):
+                            result = math.sin(result)
+                        elif isinstance(result, np.ndarray):
+                            result = np.sin(result)
+                    
+                    elif operation == "cos":
+                        # Apply cosine function
+                        if isinstance(result, (int, float)):
+                            result = math.cos(result)
+                        elif isinstance(result, np.ndarray):
+                            result = np.cos(result)
+                    
+                    elif operation == "exp":
+                        # Apply exponential function (safely)
+                        if isinstance(result, (int, float)):
+                            result = math.exp(min(result, 10))  # Avoid overflow
+                        elif isinstance(result, np.ndarray):
+                            result = np.exp(np.minimum(result, 10))
+                    
+                    elif operation == "log":
+                        # Apply logarithm (safely)
+                        if isinstance(result, (int, float)):
+                            result = math.log(abs(result) + 1e-10)
+                        elif isinstance(result, np.ndarray):
+                            result = np.log(np.abs(result) + 1e-10)
+                    
+                    elif operation == "tanh":
+                        # Apply hyperbolic tangent
+                        if isinstance(result, (int, float)):
+                            result = math.tanh(result)
+                        elif isinstance(result, np.ndarray):
+                            result = np.tanh(result)
+                    
+                    elif operation == "normalize":
+                        # Normalize values
+                        if isinstance(result, (int, float)):
+                            result = result / (1.0 + abs(result))
+                        elif isinstance(result, np.ndarray):
+                            max_abs = np.max(np.abs(result))
+                            if max_abs > 0:
+                                result = result / max_abs
+                    
+                    elif operation == "clip":
+                        # Clip values to [-1, 1]
+                        if isinstance(result, (int, float)):
+                            result = max(-1.0, min(1.0, result))
+                        elif isinstance(result, np.ndarray):
+                            result = np.clip(result, -1.0, 1.0)
+                    
+                    elif operation == "invert":
+                        # Invert values
+                        if isinstance(result, (int, float)):
+                            if result != 0:
+                                result = 1.0 / result
+                        elif isinstance(result, np.ndarray):
+                            # Avoid division by zero
+                            mask = np.abs(result) > 1e-10
+                            result[mask] = 1.0 / result[mask]
+                    
+                    elif operation == "reflect":
+                        # Reflect around zero
+                        if isinstance(result, (int, float)):
+                            result = -result
+                        elif isinstance(result, np.ndarray):
+                            result = -result
+                    
+                    elif operation == "transpose":
+                        # Transpose matrix
+                        if isinstance(result, np.ndarray) and len(result.shape) == 2:
+                            result = result.T
+                    
+                    elif operation == "negate":
+                        # Logical negation for boolean or near-boolean values
+                        if isinstance(result, bool):
+                            result = not result
+                        elif isinstance(result, (int, float)):
+                            if 0 <= result <= 1:
+                                result = 1 - result
+                        elif isinstance(result, np.ndarray):
+                            if np.all((0 <= result) & (result <= 1)):
+                                result = 1 - result
+                    
+                    elif operation == "absolute":
+                        # Absolute value
+                        if isinstance(result, (int, float)):
+                            result = abs(result)
+                        elif isinstance(result, np.ndarray):
+                            result = np.abs(result)
+                    
+                    elif operation == "square":
+                        # Square values
+                        if isinstance(result, (int, float)):
+                            result = result * result
+                        elif isinstance(result, np.ndarray):
+                            result = result * result
+                    
+                    elif operation == "smooth":
+                        # Apply smoothing
+                        if isinstance(result, (int, float)):
+                            result = 0.9 * result
+                        elif isinstance(result, np.ndarray):
+                            result = 0.9 * result
+                    
+                    elif operation == "dampen":
+                        # Dampen oscillations
+                        if isinstance(result, (int, float)):
+                            result = result / (1 + 0.1 * abs(result))
+                        elif isinstance(result, np.ndarray):
+                            result = result / (1 + 0.1 * np.abs(result))
+                    
+                    elif operation == "amplify":
+                        # Amplify small values
+                        if isinstance(result, (int, float)):
+                            result = result * (1.1 + 0.2 / (1 + abs(result)))
+                        elif isinstance(result, np.ndarray):
+                            result = result * (1.1 + 0.2 / (1 + np.abs(result)))
+                    
+                    elif operation == "stabilize":
+                        # Push values toward fixed points
+                        if isinstance(result, (int, float)):
+                            if abs(result) < 0.5:
+                                result = result * 0.9
+                            else:
+                                result = result + 0.1 * (1 if result > 0 else -1)
+                        elif isinstance(result, np.ndarray):
+                            small_mask = np.abs(result) < 0.5
+                            result[small_mask] *= 0.9
+                            result[~small_mask] += 0.1 * np.sign(result[~small_mask])
+                
+                except Exception:
+                    # Skip operations that cause errors
+                    pass
             
-            return current_state
+            return result
         
         return transformation_function
     
     def __repr__(self) -> str:
         """String representation of the genome."""
-        return f"RuleGenome({self.rule_name}, components={len(self.components)}, fitness={self.fitness:.4f})"
-
+        return f"RuleGenome(name='{self.rule_name}', components={self.components}, fitness={self.fitness:.4f})"
 
 class EvolutionaryEngine:
     """
@@ -209,59 +340,38 @@ class EvolutionaryEngine:
         self.crossover_rate = crossover_rate
         self.elitism_ratio = elitism_ratio
         
-        # Rule populations
-        self.rule_population: List[RuleGenome] = []
-        self.elite_rules: List[RuleGenome] = []
-        self.generations = 0
-        
-        # Phase populations
-        self.phase_templates: List[ResolutionPhase] = []
-        
-        # Evolution metrics
-        self.evolution_history = {
-            "avg_fitness": [],
-            "max_fitness": [],
-            "diversity": [],
-            "novelty": []
-        }
-        
-        # Initialize with seed rules
+        self.population = []
         self._initialize_population()
     
     def _initialize_population(self) -> None:
         """Initialize the rule population with seed rules and random variations."""
-        # Convert seed rules to genomes
-        for rule_name, rule_func in self.seed_rules.items():
-            # Analyze the function to extract potential components
-            components = self._analyze_function(rule_func)
-            
-            # Create a genome for this rule
-            genome = RuleGenome(
-                rule_name=rule_name,
-                components=components,
-                complexity=len(components) * 0.2,
-                fitness=0.5  # Initial conservative fitness estimate
-            )
-            
-            self.rule_population.append(genome)
-        
-        # Create additional rules to fill the population
-        while len(self.rule_population) < self.population_size:
-            # Either mutate an existing rule or create a random one
-            if self.rule_population and random.random() < 0.7:
-                # Mutate an existing rule
-                parent = random.choice(self.rule_population)
-                new_genome = parent.mutate(mutation_rate=0.5)  # Higher mutation for initialization
-            else:
-                # Create a random rule
-                components = [random.choice(PRIMITIVE_OPERATIONS) for _ in range(random.randint(1, 5))]
-                new_genome = RuleGenome(
-                    rule_name=f"Random_Rule_{len(self.rule_population)}",
-                    components=components,
-                    complexity=len(components) * 0.2
+        # Start with seed rules if provided
+        if self.seed_rules:
+            for name, func in self.seed_rules.items():
+                components = self._analyze_function(func)
+                self.population.append(
+                    RuleGenome(rule_name=name, components=components, complexity=1.0)
                 )
+        
+        # Fill the rest of the population with random genomes
+        while len(self.population) < self.population_size:
+            name = f"random_rule_{len(self.population):03d}"
+            components = []
             
-            self.rule_population.append(new_genome)
+            # Generate random components
+            for _ in range(random.randint(2, 5)):
+                # Possible operations
+                ops = [
+                    "add", "subtract", "multiply", "divide", 
+                    "sin", "cos", "exp", "log", "tanh",
+                    "normalize", "clip", "invert", "reflect",
+                    "transpose", "negate", "absolute", "square"
+                ]
+                components.append(random.choice(ops))
+            
+            self.population.append(
+                RuleGenome(rule_name=name, components=components, complexity=1.0)
+            )
     
     def _analyze_function(self, func: Callable) -> List[str]:
         """
@@ -276,9 +386,21 @@ class EvolutionaryEngine:
         Returns:
             List of operation components
         """
-        # In a real implementation, we would parse the function's code
-        # For now, just return some random components
-        return random.sample(PRIMITIVE_OPERATIONS, min(5, len(PRIMITIVE_OPERATIONS)))
+        # In a real implementation, we would analyze the function's AST or source code
+        # For this demo, we'll just return some plausible operations
+        operations = ["normalize", "clip", "smooth"]
+        
+        # Add some randomness
+        if random.random() < 0.5:
+            operations.append("add")
+        if random.random() < 0.5:
+            operations.append("multiply")
+        if random.random() < 0.3:
+            operations.append("sin")
+        if random.random() < 0.3:
+            operations.append("tanh")
+        
+        return operations
     
     def _evaluate_fitness(self, genome: RuleGenome, test_cases: List[Any]) -> float:
         """
@@ -291,70 +413,71 @@ class EvolutionaryEngine:
         Returns:
             Fitness score (0.0 to 1.0)
         """
-        if not test_cases:
-            return 0.0
+        # Convert genome to a function
+        transform_fn = genome.to_transformation_function()
         
-        # Compile the genome into a function
-        transform_func = genome.to_transformation_function()
+        # Track performance metrics
+        convergence_score = 0.0
+        stability_score = 0.0
+        novelty_score = 0.0
         
-        # Metrics for fitness
-        effectiveness = 0.0  # Does it produce meaningful change?
-        stability = 0.0  # Does it maintain stability where appropriate?
-        novelty = 0.0  # Does it produce unique results?
-        
-        previous_results = []
-        
-        for test_case in test_cases:
+        for case in test_cases:
             try:
-                # Apply the transformation
-                result = transform_func(test_case)
+                # Apply the function multiple times to check for convergence
+                states = [case]
+                for _ in range(10):
+                    states.append(transform_fn(states[-1]))
                 
-                # Check if it produced a change
-                if isinstance(test_case, (int, float)) and isinstance(result, (int, float)):
-                    # For numerical values, measure relative change
-                    if abs(test_case) > 1e-10:
-                        change_magnitude = abs((result - test_case) / test_case)
-                        # We want some change, but not too extreme
-                        effectiveness += min(change_magnitude, 0.5) / 0.5
-                    else:
-                        # For near-zero values, look at absolute change
-                        effectiveness += min(abs(result - test_case), 1.0)
+                # Check for convergence (are later states stabilizing?)
+                if len(states) >= 3:
+                    # For numeric cases
+                    if all(isinstance(s, (int, float)) for s in states):
+                        deltas = [abs(states[i+1] - states[i]) for i in range(len(states)-1)]
+                        # Are deltas decreasing?
+                        if deltas[0] > 0 and all(deltas[i] <= deltas[i-1] for i in range(1, len(deltas))):
+                            convergence_score += 1.0
+                        # Did we reach approximate convergence?
+                        if deltas[-1] < 0.01:
+                            stability_score += 1.0
+                    
+                    # For numpy arrays
+                    elif all(isinstance(s, np.ndarray) for s in states):
+                        deltas = [np.max(np.abs(states[i+1] - states[i])) for i in range(len(states)-1)]
+                        # Are deltas decreasing?
+                        if deltas[0] > 0 and all(deltas[i] <= deltas[i-1] for i in range(1, len(deltas))):
+                            convergence_score += 1.0
+                        # Did we reach approximate convergence?
+                        if deltas[-1] < 0.01:
+                            stability_score += 1.0
                 
-                # Check for stability in complex types
-                if isinstance(test_case, np.ndarray) and isinstance(result, np.ndarray):
-                    if test_case.shape == result.shape:
-                        # For matrices, measure norm of difference
-                        norm_diff = np.linalg.norm(result - test_case)
-                        stability += 1.0 / (1.0 + norm_diff)  # Higher stability for smaller changes
-                
-                # Check for novelty compared to previous results
-                for prev_result in previous_results:
-                    if isinstance(result, type(prev_result)):
-                        try:
-                            # Simple equality check for novelty
-                            if result != prev_result:
-                                novelty += 0.1
-                        except:
-                            # If comparison fails, assume they're different
-                            novelty += 0.1
-                
-                previous_results.append(result)
-                
+                # Is the final state different from the input?
+                if isinstance(case, (int, float)) and isinstance(states[-1], (int, float)):
+                    if abs(states[-1] - case) > 0.1:
+                        novelty_score += 1.0
+                elif isinstance(case, np.ndarray) and isinstance(states[-1], np.ndarray):
+                    if np.max(np.abs(states[-1] - case)) > 0.1:
+                        novelty_score += 1.0
+            
             except Exception:
-                # Penalize rules that cause errors
-                effectiveness -= 0.2
-                stability -= 0.2
+                # Failed tests reduce fitness
+                pass
         
         # Normalize scores
-        effectiveness = max(0.0, min(1.0, effectiveness / len(test_cases)))
-        stability = max(0.0, min(1.0, stability / len(test_cases)))
-        novelty = max(0.0, min(1.0, novelty / max(1, len(test_cases) - 1)))
+        if test_cases:
+            convergence_score /= len(test_cases)
+            stability_score /= len(test_cases)
+            novelty_score /= len(test_cases)
         
-        # Combine scores (weighted sum)
-        fitness = (0.4 * effectiveness) + (0.3 * stability) + (0.3 * novelty)
+        # Combine scores with weights
+        fitness = (
+            0.4 * convergence_score +
+            0.4 * stability_score +
+            0.2 * novelty_score
+        )
         
-        # Update the genome's fitness
-        genome.fitness = fitness
+        # Adjust fitness based on complexity (prefer simpler rules)
+        complexity_penalty = max(0, (genome.complexity - 1.0) * 0.1)
+        fitness = max(0, fitness - complexity_penalty)
         
         return fitness
     
@@ -371,76 +494,65 @@ class EvolutionaryEngine:
         Returns:
             Dictionary with evolution results
         """
-        start_time = time.time()
+        # Initial fitness evaluation
+        for genome in self.population:
+            genome.fitness = self._evaluate_fitness(genome, test_cases)
         
+        # Main evolution loop
         for generation in range(generations):
-            self.generations += 1
+            # Sort by fitness (descending)
+            self.population.sort(key=lambda g: g.fitness, reverse=True)
             
-            # Evaluate fitness of all rules
-            for genome in self.rule_population:
-                self._evaluate_fitness(genome, test_cases)
+            # Create next generation
+            elite_count = int(self.population_size * self.elitism_ratio)
+            new_population = self.population[:elite_count]  # Elitism
             
-            # Sort by fitness
-            self.rule_population.sort(key=lambda x: x.fitness, reverse=True)
-            
-            # Record evolution metrics
-            avg_fitness = sum(g.fitness for g in self.rule_population) / len(self.rule_population)
-            max_fitness = self.rule_population[0].fitness if self.rule_population else 0.0
-            
-            self.evolution_history["avg_fitness"].append(avg_fitness)
-            self.evolution_history["max_fitness"].append(max_fitness)
-            
-            # Calculate diversity (average pairwise difference in components)
-            diversity = self._calculate_diversity()
-            self.evolution_history["diversity"].append(diversity)
-            
-            # Calculate novelty (difference from initial population)
-            novelty = self._calculate_novelty()
-            self.evolution_history["novelty"].append(novelty)
-            
-            # Create the next generation
-            next_generation = []
-            
-            # Elitism: Keep the best performers
-            elite_count = max(1, int(self.population_size * self.elitism_ratio))
-            elite_rules = self.rule_population[:elite_count]
-            next_generation.extend(elite_rules)
-            
-            # Update elite rules
-            self.elite_rules = elite_rules.copy()
-            
-            # Fill the rest of the population
-            while len(next_generation) < self.population_size:
-                # Selection
+            # Breed the rest of the population
+            while len(new_population) < self.population_size:
+                # Select parents
                 parent1 = self._select_parent()
                 
                 # Crossover
-                if random.random() < self.crossover_rate and len(self.rule_population) > 1:
+                if random.random() < self.crossover_rate:
                     parent2 = self._select_parent(exclude=parent1)
                     child = parent1.crossover(parent2)
                 else:
-                    child = copy.deepcopy(parent1)
+                    child = RuleGenome(
+                        rule_name=f"clone_{parent1.rule_name}",
+                        components=parent1.components.copy(),
+                        complexity=parent1.complexity
+                    )
                 
                 # Mutation
                 if random.random() < self.mutation_rate:
                     child = child.mutate()
                 
-                next_generation.append(child)
+                # Add to new population
+                new_population.append(child)
             
-            # Replace population
-            self.rule_population = next_generation
+            # Replace old population
+            self.population = new_population
+            
+            # Evaluate fitness of new genomes
+            for genome in self.population:
+                if genome.fitness == 0.0:  # Only evaluate new genomes
+                    genome.fitness = self._evaluate_fitness(genome, test_cases)
         
-        end_time = time.time()
+        # Sort final population by fitness
+        self.population.sort(key=lambda g: g.fitness, reverse=True)
         
         # Return results
+        best_fitness = self.population[0].fitness if self.population else 0.0
+        avg_fitness = sum(g.fitness for g in self.population) / len(self.population) if self.population else 0.0
+        diversity = self._calculate_diversity()
+        
         return {
-            "generations": self.generations,
-            "evolved_rules": self.rule_population,
-            "elite_rules": self.elite_rules,
-            "execution_time": end_time - start_time,
-            "final_avg_fitness": self.evolution_history["avg_fitness"][-1],
-            "final_max_fitness": self.evolution_history["max_fitness"][-1],
-            "history": self.evolution_history
+            "best_rules": [(g.rule_name, g.to_transformation_function()) for g in self.population[:5]],
+            "best_fitness": best_fitness,
+            "avg_fitness": avg_fitness,
+            "diversity": diversity,
+            "generations": generations,
+            "population_size": self.population_size
         }
     
     def _select_parent(self, exclude: RuleGenome = None) -> RuleGenome:
@@ -453,25 +565,15 @@ class EvolutionaryEngine:
         Returns:
             Selected RuleGenome
         """
-        if not self.rule_population:
-            raise ValueError("Cannot select parent from empty population")
-        
-        # Create a list of candidates, excluding the specified genome if it's in the population
-        if exclude is None:
-            candidates = self.rule_population.copy()
-        else:
-            candidates = [g for g in self.rule_population if g is not exclude]
+        # Tournament selection
+        tournament_size = 3
+        candidates = [genome for genome in self.population if genome != exclude]
         
         if not candidates:
-            # If all candidates excluded, just return a random one
-            return random.choice(self.rule_population)
+            return self.population[0]  # Fallback
         
-        # Tournament selection (select best of random subset)
-        tournament_size = min(3, len(candidates))
-        tournament = random.sample(candidates, tournament_size)
-        
-        # Return the candidate with the highest fitness
-        return max(tournament, key=lambda x: x.fitness)
+        tournament = random.sample(candidates, min(tournament_size, len(candidates)))
+        return max(tournament, key=lambda g: g.fitness)
     
     def _calculate_diversity(self) -> float:
         """
@@ -480,60 +582,26 @@ class EvolutionaryEngine:
         Returns:
             Diversity score (0.0 to 1.0)
         """
-        if len(self.rule_population) <= 1:
+        if not self.population or len(self.population) < 2:
             return 0.0
         
-        # Calculate average pairwise difference in components
+        # Calculate average difference in components between genomes
         total_diff = 0
         comparisons = 0
         
-        for i, genome1 in enumerate(self.rule_population):
-            for genome2 in self.rule_population[i+1:]:
-                # Jaccard distance between component sets
-                set1 = set(genome1.components)
-                set2 = set(genome2.components)
+        for i in range(len(self.population)):
+            for j in range(i+1, len(self.population)):
+                # Count differences in components
+                g1 = set(self.population[i].components)
+                g2 = set(self.population[j].components)
                 
-                if not set1 and not set2:
-                    continue
-                    
-                intersection = len(set1.intersection(set2))
-                union = len(set1.union(set2))
-                
-                if union > 0:
-                    similarity = intersection / union
-                    difference = 1.0 - similarity
-                    total_diff += difference
+                # Jaccard distance
+                if g1 or g2:  # Avoid division by zero
+                    diff = 1.0 - len(g1 & g2) / len(g1 | g2)
+                    total_diff += diff
                     comparisons += 1
         
-        if comparisons == 0:
-            return 0.0
-            
-        return total_diff / comparisons
-    
-    def _calculate_novelty(self) -> float:
-        """
-        Calculate the novelty of the current population compared to initial seed rules.
-        
-        Returns:
-            Novelty score (0.0 to 1.0)
-        """
-        if not self.rule_population or not self.seed_rules:
-            return 0.0
-        
-        # Extract the original rule names (without version suffixes)
-        original_names = set()
-        for name in self.seed_rules.keys():
-            base_name = name.split("_v")[0]
-            original_names.add(base_name)
-        
-        # Count rules that aren't derived from original seeds
-        novel_count = 0
-        for genome in self.rule_population:
-            base_name = genome.rule_name.split("_v")[0]
-            if base_name not in original_names:
-                novel_count += 1
-        
-        return novel_count / len(self.rule_population)
+        return total_diff / comparisons if comparisons > 0 else 0.0
     
     def get_best_rules(self, count: int = 5) -> List[Tuple[str, Callable]]:
         """
@@ -545,11 +613,12 @@ class EvolutionaryEngine:
         Returns:
             List of (rule_name, transform_function) tuples
         """
-        # Sort by fitness and return the top rules
-        sorted_rules = sorted(self.rule_population, key=lambda x: x.fitness, reverse=True)
-        top_rules = sorted_rules[:count]
+        # Sort by fitness (descending)
+        self.population.sort(key=lambda g: g.fitness, reverse=True)
         
-        return [(genome.rule_name, genome.to_transformation_function()) for genome in top_rules]
+        # Return the top rules
+        return [(g.rule_name, g.to_transformation_function()) 
+                for g in self.population[:min(count, len(self.population))]]
     
     def create_meta_resolver(self) -> MetaResolver:
         """
@@ -558,21 +627,10 @@ class EvolutionaryEngine:
         Returns:
             Configured MetaResolver
         """
-        # Get the best rules
-        best_rules = self.get_best_rules(count=8)
+        # Create a new meta-resolver
+        meta = MetaResolver()
         
-        # Create a new API with the evolved rules
-        from crypto_paradox_api import CryptoParadoxAPI
-        api = CryptoParadoxAPI()
-        
-        # Register evolved rules
-        for rule_name, rule_func in best_rules:
-            api.register_rule(rule_name, rule_func, f"Evolved rule: {rule_name}")
-        
-        # Create a meta-resolver
-        meta = MetaResolver(api)
-        
-        # Create an evolutionary framework
+        # Create an evolutionary framework with best rules
         self._create_evolutionary_framework(meta)
         
         return meta
@@ -587,79 +645,13 @@ class EvolutionaryEngine:
         Args:
             meta: MetaResolver to configure
         """
-        # Get best rules for different purposes
-        all_rules = sorted(self.rule_population, key=lambda x: x.fitness, reverse=True)
+        from meta_resolver import ResolutionPhase
         
-        # Initialize phases
-        seed_phase = ResolutionPhase(
-            "Initial Seeding", 
-            is_convergent=True,
-            max_iterations=5,
-            threshold=0.01
-        )
-        
-        divergent_phase = ResolutionPhase(
-            "Creative Divergence",
-            is_convergent=False,
-            max_iterations=8,
-            threshold=0.1
-        )
-        
-        exploration_phase = ResolutionPhase(
-            "Possibility Exploration",
-            is_convergent=False,
-            max_iterations=10,
-            threshold=0.05
-        )
-        
-        convergent_phase = ResolutionPhase(
-            "Convergent Integration",
-            is_convergent=True,
-            max_iterations=12,
-            threshold=0.001
-        )
-        
-        refinement_phase = ResolutionPhase(
-            "Final Refinement",
-            is_convergent=True,
-            max_iterations=15,
-            threshold=0.0001
-        )
-        
-        # Add top rules to each phase
-        for i, rule in enumerate(all_rules):
-            if i % 5 == 0:
-                seed_phase.add_rule(rule.rule_name)
-            elif i % 5 == 1:
-                divergent_phase.add_rule(rule.rule_name)
-            elif i % 5 == 2:
-                exploration_phase.add_rule(rule.rule_name)
-            elif i % 5 == 3:
-                convergent_phase.add_rule(rule.rule_name)
-            else:
-                refinement_phase.add_rule(rule.rule_name)
-        
-        # Add standard rules if needed
-        if len(seed_phase.rules) < 2:
-            seed_phase.add_rule("Fixed-Point Iteration")
-        
-        if len(divergent_phase.rules) < 2:
-            divergent_phase.add_rule("Duality Inversion")
-            
-        if len(exploration_phase.rules) < 2:
-            exploration_phase.add_rule("Bayesian Update")
-            
-        if len(convergent_phase.rules) < 2:
-            convergent_phase.add_rule("Eigenvalue Stabilization")
-            
-        if len(refinement_phase.rules) < 2:
-            refinement_phase.add_rule("Recursive Normalization")
-        
-        # Define transition conditions
+        # Create custom transition functions
         def to_divergent(state: Any) -> bool:
             """Transition to divergent phase when near convergence."""
             if isinstance(state, (int, float)):
-                return abs(state - 1.0) < 0.1
+                return abs(state) < 0.2
             return False
         
         def to_exploration(state: Any) -> bool:
@@ -668,239 +660,33 @@ class EvolutionaryEngine:
         
         def to_convergent(state: Any) -> bool:
             """Transition to convergent phase after exploration."""
+            if isinstance(state, (int, float)):
+                return abs(state) > 0.5
             return True
         
-        def to_refinement(state: Any) -> bool:
-            """Transition to refinement for final touches."""
-            return True
+        # Get best rules
+        best_rules = [g.rule_name for g, _ in zip(self.population, range(3))]
         
-        # Configure transitions
-        seed_phase.add_transition("Creative Divergence", to_divergent)
-        divergent_phase.add_transition("Possibility Exploration", to_exploration)
-        exploration_phase.add_transition("Convergent Integration", to_convergent)
-        convergent_phase.add_transition("Final Refinement", to_refinement)
+        # Create phases
+        convergent = ResolutionPhase("evo_convergent", is_convergent=True)
+        for rule in best_rules[:2]:  # Use top 2 for convergence
+            convergent.add_rule(rule)
+        convergent.add_transition("evo_divergent", to_divergent)
+        
+        divergent = ResolutionPhase("evo_divergent", is_convergent=False)
+        for rule in best_rules[2:4]:  # Use next 2 for divergence
+            divergent.add_rule(rule)
+        divergent.add_transition("evo_exploration", to_exploration)
+        
+        exploration = ResolutionPhase("evo_exploration", is_convergent=False)
+        for rule in best_rules[3:]:  # Use remaining rules for exploration
+            exploration.add_rule(rule)
+        exploration.add_transition("evo_convergent", to_convergent)
         
         # Add phases to meta-resolver
-        meta.add_phase(seed_phase)
-        meta.add_phase(divergent_phase)
-        meta.add_phase(exploration_phase)
-        meta.add_phase(convergent_phase)
-        meta.add_phase(refinement_phase)
+        meta.add_phase(convergent)
+        meta.add_phase(divergent)
+        meta.add_phase(exploration)
         
         # Set initial phase
-        meta.set_initial_phase("Initial Seeding")
-
-
-# Primitive operations for building evolutionary rules
-PRIMITIVE_OPERATIONS = [
-    "identity",
-    "inverse",
-    "square",
-    "sqrt",
-    "normalize",
-    "dampening",
-    "oscillate",
-    "truncate",
-    "inflate",
-    "reflect",
-    "shift",
-    "scale",
-    "merge",
-    "split",
-    "filter",
-    "smooth",
-    "randomize",
-    "reorganize",
-    "compose",
-    "extract"
-]
-
-# Functions corresponding to primitive operations
-OPERATION_FUNCTIONS = {
-    "identity": lambda x: x,
-    
-    "inverse": lambda x: (
-        1.0 / x if isinstance(x, (int, float)) and x != 0 else
-        1.0 / (x + 1e-10) if isinstance(x, (int, float)) else
-        1.0 / (np.array(x) + 1e-10) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "square": lambda x: (
-        x ** 2 if isinstance(x, (int, float)) else
-        np.power(x, 2) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "sqrt": lambda x: (
-        np.sqrt(x) if isinstance(x, (int, float)) and x >= 0 else
-        np.sqrt(np.abs(x)) if isinstance(x, (int, float)) else
-        np.sqrt(np.abs(x)) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "normalize": lambda x: (
-        x / abs(x) if isinstance(x, (int, float)) and x != 0 else
-        x / np.max(np.abs(x)) if isinstance(x, np.ndarray) and np.max(np.abs(x)) > 0 else
-        x
-    ),
-    
-    "dampening": lambda x: (
-        x * 0.9 if isinstance(x, (int, float)) else
-        x * 0.9 if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "oscillate": lambda x: (
-        np.sin(x) if isinstance(x, (int, float)) else
-        np.sin(x) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "truncate": lambda x: (
-        int(x) if isinstance(x, float) else
-        np.trunc(x) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "inflate": lambda x: (
-        x * 1.1 if isinstance(x, (int, float)) else
-        x * 1.1 if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "reflect": lambda x: (
-        -x if isinstance(x, (int, float)) else
-        -x if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "shift": lambda x: (
-        x + 0.1 if isinstance(x, (int, float)) else
-        x + 0.1 if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "scale": lambda x: (
-        x * 2.0 if isinstance(x, (int, float)) else
-        x * 2.0 if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "merge": lambda x: (
-        np.mean(x) if isinstance(x, list) and all(isinstance(i, (int, float)) for i in x) else
-        np.mean(x, axis=0) if isinstance(x, np.ndarray) and len(x.shape) > 1 else
-        x
-    ),
-    
-    "split": lambda x: (
-        [x/2, x/2] if isinstance(x, (int, float)) else
-        np.array([x/2, x/2]) if isinstance(x, np.ndarray) and x.size == 1 else
-        x
-    ),
-    
-    "filter": lambda x: (
-        x if isinstance(x, (int, float)) and abs(x) > 0.1 else
-        0 if isinstance(x, (int, float)) else
-        x * (np.abs(x) > 0.1) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "smooth": lambda x: (
-        x if isinstance(x, (int, float)) else
-        np.convolve(x, np.ones(3)/3, mode='same') if isinstance(x, np.ndarray) and len(x.shape) == 1 and x.shape[0] >= 3 else
-        x
-    ),
-    
-    "randomize": lambda x: (
-        x * (0.9 + 0.2 * random.random()) if isinstance(x, (int, float)) else
-        x * (0.9 + 0.2 * np.random.random(x.shape)) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "reorganize": lambda x: (
-        x if not isinstance(x, np.ndarray) or len(x.shape) < 2 else
-        x.T if len(x.shape) == 2 else
-        x
-    ),
-    
-    "compose": lambda x: (
-        np.sin(np.sqrt(np.abs(x))) if isinstance(x, (int, float)) else
-        np.sin(np.sqrt(np.abs(x))) if isinstance(x, np.ndarray) else
-        x
-    ),
-    
-    "extract": lambda x: (
-        x if isinstance(x, (int, float)) else
-        x.flatten()[0] if isinstance(x, np.ndarray) and x.size > 0 else
-        x
-    )
-}
-
-
-def demo_evolutionary_engine():
-    """Demonstrate the evolutionary engine."""
-    print("Crypto_ParadoxOS Evolutionary Engine Demonstration")
-    print("=================================================")
-    
-    # Create test cases for evolution
-    test_cases = [
-        0.5,  # Numerical value
-        -1.0,  # Negative value
-        np.array([[1.0, 0.5], [0.3, 1.2]]),  # 2x2 matrix
-        [0.1, 0.2, 0.3, 0.4],  # List of numbers
-        {
-            'value': 0.5,
-            'uncertainty': 0.1
-        }  # Dictionary representation
-    ]
-    
-    # Create engine with seed rules from transformation_rules
-    from transformation_rules import get_available_rules
-    seed_rules = get_available_rules()
-    
-    engine = EvolutionaryEngine(
-        seed_rules=seed_rules,
-        population_size=20,
-        mutation_rate=0.3,
-        crossover_rate=0.7
-    )
-    
-    print(f"\nInitialized evolutionary engine with {len(engine.rule_population)} rules")
-    print(f"Starting evolution for 10 generations...")
-    
-    # Run evolution
-    results = engine.evolve(test_cases, generations=10)
-    
-    print("\nEvolution completed:")
-    print(f"- Generations: {results['generations']}")
-    print(f"- Final average fitness: {results['final_avg_fitness']:.4f}")
-    print(f"- Final maximum fitness: {results['final_max_fitness']:.4f}")
-    print(f"- Execution time: {results['execution_time']:.2f} seconds")
-    
-    # Show the best rules
-    print("\nTop evolved rules:")
-    best_rules = sorted(results['evolved_rules'], key=lambda x: x.fitness, reverse=True)[:5]
-    
-    for i, rule in enumerate(best_rules):
-        print(f"{i+1}. {rule.rule_name} (Fitness: {rule.fitness:.4f}, Components: {len(rule.components)})")
-        print(f"   Components: {', '.join(rule.components[:3])}{'...' if len(rule.components) > 3 else ''}")
-        
-        if rule.ancestry:
-            print(f"   Ancestry: {' → '.join(rule.ancestry[-2:])}")
-    
-    print("\nCreating Meta-Resolver with evolved rules...")
-    meta_resolver = engine.create_meta_resolver()
-    
-    print("\nMeta-Resolver phase structure:")
-    for phase_name in meta_resolver.phases:
-        phase = meta_resolver.phases[phase_name]
-        print(f"- {phase.name} ({'Convergent' if phase.is_convergent else 'Divergent'})")
-        print(f"  Rules: {', '.join(phase.rules[:3])}{'...' if len(phase.rules) > 3 else ''}")
-        print(f"  Transitions: {', '.join(phase.transition_conditions.keys())}")
-    
-    print("\nEvolutionary Engine Demonstration Complete")
-
-
-if __name__ == "__main__":
-    demo_evolutionary_engine()
+        meta.set_initial_phase("evo_convergent")
