@@ -34,7 +34,7 @@ def main():
         
         st.subheader("Resolution Parameters")
         max_iterations = st.slider("Maximum iterations:", 1, 100, 20)
-        convergence_threshold = st.slider("Convergence threshold:", 0.0001, 0.1, 0.001, format="%.4f")
+        convergence_threshold = st.slider("Convergence threshold:", min_value=0.0001, max_value=0.1, value=0.001, step=0.0001, format="%.4f")
         
         st.subheader("Visualization Options")
         show_step_details = st.checkbox("Show detailed steps", value=True)
@@ -69,7 +69,7 @@ def main():
             dimension = 1
             
         elif input_method == "Matrix":
-            dimension = st.slider("Matrix dimension:", 2, 5, 3)
+            dimension = st.slider("Matrix dimension:", min_value=2, max_value=5, value=3, step=1)
             matrix_input = []
             for i in range(dimension):
                 row = []
