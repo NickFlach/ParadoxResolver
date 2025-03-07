@@ -349,7 +349,8 @@ class AllocationOptimizer:
             "converged": result["result"]["converged"],
             "execution_time": result["result"]["execution_time"],
             "raw_allocations": allocations,
-            "resource_allocations": resource_totals
+            "resource_allocations": resource_totals,
+            "config_used": config  # Include the configuration used
         }
         
         return optimization_result

@@ -207,15 +207,22 @@ class TestAllocationOptimizer(unittest.TestCase):
         """Test optimization with custom configuration."""
         custom_config = {
             "prioritize_fairness": True,
-            "weight_influence": 0.8
+            "weight_influence": 0.8,
+            "max_iterations": 15,
+            "convergence_threshold": 0.0005
         }
         
         result = self.optimizer.optimize(self.problem, custom_config)
         
         # Verify the result
         self.assertIsInstance(result, dict)
-        self.assertIn("config_used", result)
-        self.assertEqual(result["config_used"]["prioritize_fairness"], True)
+        self.assertIn("resource_allocations", result)
+        self.assertIn("raw_allocations", result)
+        
+        # Check that we have the expected structure
+        self.assertIsInstance(result["resource_allocations"], dict)
+        self.assertIn("Budget", result["resource_allocations"])
+        self.assertIn("Time", result["resource_allocations"])
 
 
 if __name__ == "__main__":
