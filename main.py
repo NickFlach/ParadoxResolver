@@ -215,6 +215,10 @@ def main():
         - Governance systems with conflicting incentives
         - AI ethics dilemmas
         - Cryptographic protocol design
+        
+        ### Contact
+        
+        For inquiries, contact us at: flaukowski@proton.me
         """)
     
     with tabs[3]:

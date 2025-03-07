@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+# This is a placeholder for the Crypto_ParadoxOS Windows CLI
+# In a real implementation, this would be a compiled Windows executable
+import sys
+import os
+
+# Import the core CLI functionality
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from paradox_cli import main
+
+if __name__ == "__main__":
+    sys.exit(main())

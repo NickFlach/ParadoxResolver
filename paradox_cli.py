@@ -1,135 +1,87 @@
 #!/usr/bin/env python3
 """
-Crypto_ParadoxOS Command Line Interface
+Crypto_ParadoxOS Command Line Interface (CLI)
 
-This module provides a unified command-line interface to the Crypto_ParadoxOS
-system, allowing access to all major features through a simple CLI.
+This module provides a command-line interface to the Crypto_ParadoxOS system,
+enabling direct access to core functionality from the terminal.
 """
 
 import argparse
 import json
 import sys
-import numpy as np
 import time
-from typing import Any, Dict, List, Optional
+import os
+import numpy as np
+from typing import Any, Dict, List, Tuple
 
-# Import core functionality
-from crypto_paradox_os import ParadoxResolver, ParadoxState, TransformationRule
-from crypto_paradox_os import get_standard_rules, main as core_main
-from crypto_paradox_api import CryptoParadoxAPI, demo_api
-from crypto_paradox_optimizer import (
-    AllocationOptimizer, AllocationProblem, Resource, Stakeholder, 
-    demo_allocation
-)
-
+from paradox_resolver import ParadoxResolver
+from transformation_rules import get_available_rules
+from meta_resolver import MetaResolver
+from evolutionary_engine import EvolutionaryEngine
+from utils import format_paradox_input, validate_input
 
 class ParadoxCLI:
     """Command-line interface for the Crypto_ParadoxOS system."""
     
     def __init__(self):
         """Initialize the CLI with parsers and commands."""
-        self.api = CryptoParadoxAPI()
-        self.optimizer = AllocationOptimizer(api=self.api)
-        
-        # Set up argument parser
         self.parser = argparse.ArgumentParser(
-            description="Crypto_ParadoxOS: Recursive Paradox-Resolution System"
+            description="Crypto_ParadoxOS: A Recursive Paradox-Resolution System",
+            formatter_class=argparse.RawDescriptionHelpFormatter
         )
         self._setup_parsers()
     
     def _setup_parsers(self):
         """Set up command-line argument parsers."""
-        subparsers = self.parser.add_subparsers(
-            dest="command",
-            help="Command to execute"
-        )
+        subparsers = self.parser.add_subparsers(dest="command", help="Command to execute")
         
-        # 'resolve' command
-        resolve_parser = subparsers.add_parser(
-            "resolve",
-            help="Resolve a paradoxical input"
-        )
-        resolve_parser.add_argument(
-            "input",
-            help="Input value or path to input file"
-        )
-        resolve_parser.add_argument(
-            "--type",
-            choices=["numerical", "matrix", "text"],
-            default="numerical",
-            help="Type of input data"
-        )
-        resolve_parser.add_argument(
-            "--iterations",
-            type=int,
-            default=20,
-            help="Maximum iterations for resolution"
-        )
-        resolve_parser.add_argument(
-            "--threshold",
-            type=float,
-            default=0.001,
-            help="Convergence threshold"
-        )
-        resolve_parser.add_argument(
-            "--rules",
-            nargs="+",
-            help="Specific rules to apply (space-separated)"
-        )
-        resolve_parser.add_argument(
-            "--output",
-            help="Path to output file for results (JSON)"
-        )
+        # Resolve command
+        resolve_parser = subparsers.add_parser("resolve", help="Resolve a paradox")
+        resolve_parser.add_argument("--input", required=True, help="Paradox input value or expression")
+        resolve_parser.add_argument("--type", choices=["numerical", "matrix", "text"], 
+                                  default="numerical", help="Type of the paradox input")
+        resolve_parser.add_argument("--initial-value", type=float, default=0.5,
+                                  help="Initial value for numerical paradoxes")
+        resolve_parser.add_argument("--iterations", type=int, default=20,
+                                  help="Maximum iterations to perform")
+        resolve_parser.add_argument("--threshold", type=float, default=0.001,
+                                  help="Convergence threshold")
+        resolve_parser.add_argument("--rules", nargs="+", 
+                                  help="Transformation rules to apply (default: all)")
+        resolve_parser.add_argument("--output", help="Output file for results (JSON)")
         
-        # 'optimize' command
-        optimize_parser = subparsers.add_parser(
-            "optimize",
-            help="Optimize resource allocations"
-        )
-        optimize_parser.add_argument(
-            "config",
-            help="Path to optimization configuration file (JSON)"
-        )
-        optimize_parser.add_argument(
-            "--iterations",
-            type=int,
-            default=50,
-            help="Maximum iterations for optimization"
-        )
-        optimize_parser.add_argument(
-            "--threshold",
-            type=float,
-            default=0.0001,
-            help="Convergence threshold"
-        )
-        optimize_parser.add_argument(
-            "--output",
-            help="Path to output file for results (JSON)"
-        )
+        # Evolve command
+        evolve_parser = subparsers.add_parser("evolve", help="Run the evolutionary engine")
+        evolve_parser.add_argument("--generations", type=int, default=10,
+                                 help="Number of generations to evolve")
+        evolve_parser.add_argument("--population", type=int, default=20,
+                                 help="Population size")
+        evolve_parser.add_argument("--mutation-rate", type=float, default=0.3,
+                                 help="Mutation rate (0.0 to 1.0)")
+        evolve_parser.add_argument("--crossover-rate", type=float, default=0.7,
+                                 help="Crossover rate (0.0 to 1.0)")
+        evolve_parser.add_argument("--test-cases", help="JSON file with test cases")
+        evolve_parser.add_argument("--output", help="Output file for evolved rules (JSON)")
         
-        # 'demo' command
-        demo_parser = subparsers.add_parser(
-            "demo",
-            help="Run a demonstration of the system"
-        )
-        demo_parser.add_argument(
-            "type",
-            choices=["basic", "api", "allocation"],
-            default="basic",
-            help="Type of demonstration to run"
-        )
+        # Meta-resolve command
+        meta_parser = subparsers.add_parser("meta-resolve", 
+                                         help="Use the meta-resolver framework")
+        meta_parser.add_argument("--input", required=True, help="Paradox input value or expression")
+        meta_parser.add_argument("--type", choices=["numerical", "matrix", "text"], 
+                               default="numerical", help="Type of the paradox input")
+        meta_parser.add_argument("--framework", choices=["standard", "convergence", "expansion", "custom"],
+                               default="standard", help="Meta-resolution framework to use")
+        meta_parser.add_argument("--config", help="JSON file with custom framework configuration")
+        meta_parser.add_argument("--max-transitions", type=int, default=10,
+                               help="Maximum phase transitions")
+        meta_parser.add_argument("--output", help="Output file for results (JSON)")
         
-        # 'rules' command
-        rules_parser = subparsers.add_parser(
-            "rules",
-            help="List available transformation rules"
-        )
-        
-        # 'interactive' command
-        interactive_parser = subparsers.add_parser(
-            "interactive",
-            help="Start interactive mode"
-        )
+        # Rules command
+        rules_parser = subparsers.add_parser("rules", help="List available transformation rules")
+        rules_parser.add_argument("--type", choices=["standard", "evolved", "all"],
+                                default="all", help="Type of rules to list")
+        rules_parser.add_argument("--verbose", action="store_true", 
+                                help="Show detailed rule descriptions")
     
     def parse_input(self, input_str: str, input_type: str) -> Any:
         """
@@ -143,216 +95,214 @@ class ParadoxCLI:
             Parsed input value
         """
         if input_type == "numerical":
-            try:
-                return float(input_str)
-            except ValueError:
-                # Check if it's a file path
-                try:
-                    with open(input_str, 'r') as f:
-                        return float(f.read().strip())
-                except:
-                    print(f"Error: Could not parse '{input_str}' as a numerical value")
-                    sys.exit(1)
-        
+            return input_str
         elif input_type == "matrix":
-            # Check if it's a file path
             try:
-                with open(input_str, 'r') as f:
-                    lines = f.readlines()
-                    matrix = []
-                    for line in lines:
-                        row = [float(x) for x in line.strip().split()]
-                        matrix.append(row)
+                # Try to parse as a JSON array
+                matrix = json.loads(input_str)
+                return np.array(matrix)
+            except json.JSONDecodeError:
+                # If not valid JSON, try to evaluate as Python expression
+                try:
+                    matrix = eval(input_str)
                     return np.array(matrix)
-            except:
-                print(f"Error: Could not parse '{input_str}' as a matrix file")
-                print("Matrix files should contain space-separated values, one row per line")
-                sys.exit(1)
+                except Exception:
+                    raise ValueError(f"Could not parse matrix input: {input_str}")
+        else:  # text
+            return input_str
+    
+    def command_resolve(self, args):
+        """Execute the resolve command."""
+        # Parse and validate input
+        paradox_input = self.parse_input(args.input, args.type)
+        formatted_input = format_paradox_input(
+            paradox_input, args.type, 
+            args.initial_value if args.type == "numerical" else None
+        )
+        is_valid, validation_msg = validate_input(formatted_input, args.type)
         
-        elif input_type == "text":
-            # Check if it's a file path
+        if not is_valid:
+            print(f"Error: {validation_msg}")
+            return 1
+        
+        # Set up transformation rules
+        available_rules = get_available_rules()
+        if args.rules:
+            selected_rules = {name: available_rules[name] for name in args.rules if name in available_rules}
+            if not selected_rules:
+                print("Error: No valid transformation rules specified")
+                return 1
+        else:
+            selected_rules = available_rules
+        
+        # Initialize resolver and run resolution
+        print(f"Beginning resolution with {len(selected_rules)} rules")
+        print(f"Initial state: {formatted_input}")
+        
+        resolver = ParadoxResolver(
+            transformation_rules=selected_rules,
+            max_iterations=args.iterations,
+            convergence_threshold=args.threshold
+        )
+        
+        start_time = time.time()
+        result, steps, converged = resolver.resolve(formatted_input)
+        end_time = time.time()
+        
+        # Display results
+        processing_time = end_time - start_time
+        if converged:
+            print(f"Paradox resolved in {len(steps)-1} iterations!")
+        else:
+            print(f"Maximum iterations ({args.iterations}) reached without convergence.")
+        
+        print(f"Final state: {result}")
+        print(f"Processing time: {processing_time:.4f} seconds")
+        
+        # Save results if output file specified
+        if args.output:
+            results_dict = {
+                "input": args.input,
+                "input_type": args.type,
+                "final_state": result.tolist() if isinstance(result, np.ndarray) else result,
+                "converged": converged,
+                "iterations": len(steps) - 1,
+                "processing_time": processing_time,
+                "steps": [step.tolist() if isinstance(step, np.ndarray) else step for step in steps]
+            }
+            
+            with open(args.output, 'w') as f:
+                json.dump(results_dict, f, indent=2)
+            print(f"Results saved to {args.output}")
+        
+        return 0
+    
+    def command_evolve(self, args):
+        """Execute the evolve command."""
+        # Load test cases
+        if args.test_cases:
             try:
-                with open(input_str, 'r') as f:
-                    return f.read().strip()
-            except:
-                # Assume it's a direct text input
-                return input_str
-        
-        # Default case
-        return input_str
-    
-    def load_optimization_config(self, config_path: str) -> Dict[str, Any]:
-        """
-        Load optimization configuration from a JSON file.
-        
-        Args:
-            config_path: Path to configuration file
-            
-        Returns:
-            Dictionary containing the optimization configuration
-        """
-        try:
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-            
-            # Validate required fields
-            if "resources" not in config or "stakeholders" not in config:
-                raise ValueError("Configuration must include 'resources' and 'stakeholders'")
-            
-            return config
-            
-        except Exception as e:
-            print(f"Error loading configuration: {str(e)}")
-            sys.exit(1)
-    
-    def create_optimization_problem(self, config: Dict[str, Any]) -> AllocationProblem:
-        """
-        Create an allocation problem from configuration.
-        
-        Args:
-            config: Configuration dictionary
-            
-        Returns:
-            AllocationProblem instance
-        """
-        # Create resources
-        resources = []
-        for r_config in config["resources"]:
-            resources.append(Resource(
-                name=r_config["name"],
-                total=r_config["total"],
-                min_allocation=r_config.get("min_allocation", 0.0),
-                max_allocation=r_config.get("max_allocation")
-            ))
-        
-        # Create stakeholders
-        stakeholders = []
-        for s_config in config["stakeholders"]:
-            stakeholders.append(Stakeholder(
-                name=s_config["name"],
-                influence=s_config.get("influence", 1.0),
-                preferences=s_config.get("preferences", {})
-            ))
-        
-        # Create and return the problem
-        return AllocationProblem(resources, stakeholders)
-    
-    def save_results(self, results: Dict[str, Any], output_path: str) -> None:
-        """
-        Save results to a JSON file.
-        
-        Args:
-            results: Results dictionary
-            output_path: Path to output file
-        """
-        # Convert numpy arrays to lists for JSON serialization
-        def convert_numpy(obj):
-            if isinstance(obj, np.ndarray):
-                return obj.tolist()
-            elif isinstance(obj, np.integer):
-                return int(obj)
-            elif isinstance(obj, np.floating):
-                return float(obj)
-            elif isinstance(obj, dict):
-                return {k: convert_numpy(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_numpy(v) for v in obj]
-            else:
-                return obj
-        
-        try:
-            with open(output_path, 'w') as f:
-                json.dump(convert_numpy(results), f, indent=2)
-            print(f"Results saved to {output_path}")
-        except Exception as e:
-            print(f"Error saving results: {str(e)}")
-    
-    def run_interactive(self):
-        """Run the CLI in interactive mode."""
-        print("Crypto_ParadoxOS Interactive Mode")
-        print("=================================")
-        print("Type 'help' for commands, 'exit' to quit")
-        
-        while True:
-            try:
-                command = input("\nparadox> ").strip()
-                
-                if command.lower() in ('exit', 'quit', 'q'):
-                    break
-                
-                elif command.lower() in ('help', '?', 'h'):
-                    print("\nAvailable commands:")
-                    print("  resolve [value] - Resolve a paradoxical value")
-                    print("  rules - List available transformation rules")
-                    print("  optimize - Start optimization wizard")
-                    print("  demo - Run a demonstration")
-                    print("  exit/quit - Exit interactive mode")
-                
-                elif command.lower().startswith('resolve'):
-                    parts = command.split(maxsplit=1)
-                    if len(parts) == 1:
-                        value = input("Enter value to resolve: ")
-                    else:
-                        value = parts[1]
-                    
-                    input_type = input("Enter input type (numerical, matrix, text) [numerical]: ").strip()
-                    if not input_type:
-                        input_type = "numerical"
-                    
-                    try:
-                        parsed_input = self.parse_input(value, input_type)
-                        print(f"Resolving {input_type} input: {parsed_input}")
-                        
-                        config = {
-                            "max_iterations": 20,
-                            "convergence_threshold": 0.001
-                        }
-                        
-                        result = self.api.resolve_paradox(parsed_input, input_type, config)
-                        
-                        print("\nResolution Results:")
-                        print(f"Converged: {result['result']['converged']}")
-                        print(f"Iterations: {result['result']['iterations']}")
-                        print(f"Final state: {result['result']['final_state']}")
-                        
-                    except Exception as e:
-                        print(f"Error: {str(e)}")
-                
-                elif command.lower() == 'rules':
-                    print("\nAvailable Transformation Rules:")
-                    for name, desc in self.api.get_available_rules().items():
-                        print(f"- {name}: {desc}")
-                
-                elif command.lower() == 'optimize':
-                    print("\nOptimization wizard not implemented in interactive mode.")
-                    print("Use 'paradox_cli.py optimize config.json' for optimization.")
-                
-                elif command.lower().startswith('demo'):
-                    parts = command.split(maxsplit=1)
-                    if len(parts) == 1:
-                        demo_type = input("Enter demo type (basic, api, allocation) [basic]: ").strip()
-                        if not demo_type:
-                            demo_type = "basic"
-                    else:
-                        demo_type = parts[1]
-                    
-                    if demo_type == "basic":
-                        core_main()
-                    elif demo_type == "api":
-                        demo_api()
-                    elif demo_type == "allocation":
-                        demo_allocation()
-                    else:
-                        print(f"Unknown demo type: {demo_type}")
-                
-                else:
-                    print(f"Unknown command: {command}")
-                    print("Type 'help' for available commands")
-            
-            except KeyboardInterrupt:
-                print("\nOperation cancelled.")
+                with open(args.test_cases, 'r') as f:
+                    test_cases = json.load(f)
             except Exception as e:
-                print(f"Error: {str(e)}")
+                print(f"Error loading test cases: {str(e)}")
+                return 1
+        else:
+            # Default test cases if none provided
+            test_cases = [0.5, -1.0, 2.0, [0.8, 0.2], [[0.7, 0.3], [0.2, 0.8]]]
+        
+        # Initialize evolutionary engine
+        engine = EvolutionaryEngine(
+            population_size=args.population,
+            mutation_rate=args.mutation_rate,
+            crossover_rate=args.crossover_rate
+        )
+        
+        # Run evolution
+        print(f"Starting evolution with population={args.population}, generations={args.generations}")
+        print(f"Test cases: {test_cases}")
+        
+        start_time = time.time()
+        results = engine.evolve(test_cases, generations=args.generations)
+        end_time = time.time()
+        
+        # Display results
+        print(f"Evolution completed in {end_time - start_time:.4f} seconds")
+        print(f"Best fitness: {results['best_fitness']:.4f}")
+        print(f"Population diversity: {results['diversity']:.4f}")
+        
+        print("\nTop evolved rules:")
+        for i, (name, _) in enumerate(results['best_rules'][:5], 1):
+            print(f"{i}. {name}")
+        
+        # Save results if output file specified
+        if args.output:
+            with open(args.output, 'w') as f:
+                # Clean numpy arrays for JSON serialization
+                clean_results = {
+                    "generations": args.generations,
+                    "population_size": args.population,
+                    "best_fitness": float(results['best_fitness']),
+                    "avg_fitness": float(results['avg_fitness']),
+                    "diversity": float(results['diversity']),
+                    "best_rules": [{"name": name} for name, _ in results['best_rules'][:5]]
+                }
+                json.dump(clean_results, f, indent=2)
+            print(f"Results saved to {args.output}")
+        
+        return 0
+    
+    def command_meta_resolve(self, args):
+        """Execute the meta-resolve command."""
+        # Parse and validate input
+        paradox_input = self.parse_input(args.input, args.type)
+        
+        # Create meta-resolver based on selected framework
+        meta = MetaResolver()
+        
+        if args.framework == "standard":
+            meta.create_standard_framework()
+        elif args.framework == "custom" and args.config:
+            try:
+                with open(args.config, 'r') as f:
+                    config = json.load(f)
+                # Custom framework initialization would go here
+                # This is a simplified version
+                meta.create_standard_framework()  # Fallback to standard for demo
+            except Exception as e:
+                print(f"Error loading custom framework: {str(e)}")
+                return 1
+        else:
+            meta.create_standard_framework()
+        
+        # Execute meta-resolution
+        print(f"Beginning meta-resolution with framework: {args.framework}")
+        print(f"Initial state: {paradox_input}")
+        
+        start_time = time.time()
+        result = meta.resolve(
+            paradox_input, 
+            args.type,
+            max_phase_transitions=args.max_transitions
+        )
+        end_time = time.time()
+        
+        # Display results
+        processing_time = end_time - start_time
+        print(f"Meta-resolution completed in {processing_time:.4f} seconds")
+        print(f"Final state: {result['final_state']}")
+        print(f"Phase transitions: {result['phase_transitions']}")
+        print(f"Total iterations: {result['total_iterations']}")
+        
+        # Save results if output file specified
+        if args.output:
+            # Clean numpy arrays for JSON serialization
+            if isinstance(result['final_state'], np.ndarray):
+                result['final_state'] = result['final_state'].tolist()
+            
+            with open(args.output, 'w') as f:
+                json.dump(result, f, indent=2)
+            print(f"Results saved to {args.output}")
+        
+        return 0
+    
+    def command_rules(self, args):
+        """Execute the rules command."""
+        available_rules = get_available_rules()
+        
+        print("Available transformation rules:")
+        print("------------------------------")
+        
+        for name in available_rules:
+            if args.verbose:
+                # In a full implementation, we would include detailed descriptions
+                print(f"\n{name}:")
+                print(f"  Type: Standard")
+                print(f"  Description: Transformation rule for paradox resolution")
+            else:
+                print(f"- {name}")
+        
+        return 0
     
     def run(self, args=None):
         """
@@ -364,88 +314,21 @@ class ParadoxCLI:
         parsed_args = self.parser.parse_args(args)
         
         if parsed_args.command == "resolve":
-            # Parse the input
-            input_value = self.parse_input(parsed_args.input, parsed_args.type)
-            
-            # Configure the resolution
-            config = {
-                "max_iterations": parsed_args.iterations,
-                "convergence_threshold": parsed_args.threshold
-            }
-            
-            if parsed_args.rules:
-                config["rules"] = parsed_args.rules
-            
-            # Resolve the paradox
-            print(f"Resolving {parsed_args.type} paradox...")
-            result = self.api.resolve_paradox(input_value, parsed_args.type, config)
-            
-            # Display the results
-            print(f"\nResolution completed in {result['result']['execution_time']:.4f} seconds")
-            print(f"Converged: {result['result']['converged']}")
-            print(f"Iterations: {result['result']['iterations']}")
-            print(f"Final state: {result['result']['final_state']}")
-            
-            # Save results if output path specified
-            if parsed_args.output:
-                self.save_results(result, parsed_args.output)
-        
-        elif parsed_args.command == "optimize":
-            # Load the optimization configuration
-            config = self.load_optimization_config(parsed_args.config)
-            
-            # Create the allocation problem
-            problem = self.create_optimization_problem(config)
-            
-            # Configure the optimizer
-            self.optimizer.max_iterations = parsed_args.iterations
-            self.optimizer.convergence_threshold = parsed_args.threshold
-            
-            # Perform the optimization
-            print("Optimizing resource allocations...")
-            result = self.optimizer.optimize(problem)
-            
-            # Display the results
-            print(f"\nOptimization completed in {result['execution_time']:.4f} seconds")
-            print(f"Converged: {result['converged']}")
-            print(f"Iterations: {result['iterations']}")
-            
-            print("\nResource Allocations:")
-            for r_name, r_data in result["resource_allocations"].items():
-                print(f"\n{r_name} (Total: ${r_data['total']:,.2f}):")
-                for s_name, amount in r_data["allocations"].items():
-                    print(f"  {s_name}: ${amount:,.2f} ({amount/r_data['total']*100:.1f}%)")
-            
-            # Save results if output path specified
-            if parsed_args.output:
-                self.save_results(result, parsed_args.output)
-        
-        elif parsed_args.command == "demo":
-            if parsed_args.type == "basic":
-                core_main()
-            elif parsed_args.type == "api":
-                demo_api()
-            elif parsed_args.type == "allocation":
-                demo_allocation()
-        
+            return self.command_resolve(parsed_args)
+        elif parsed_args.command == "evolve":
+            return self.command_evolve(parsed_args)
+        elif parsed_args.command == "meta-resolve":
+            return self.command_meta_resolve(parsed_args)
         elif parsed_args.command == "rules":
-            print("Available Transformation Rules:")
-            for name, desc in self.api.get_available_rules().items():
-                print(f"- {name}: {desc}")
-        
-        elif parsed_args.command == "interactive":
-            self.run_interactive()
-        
+            return self.command_rules(parsed_args)
         else:
-            # If no command specified, print help
             self.parser.print_help()
-
+            return 1
 
 def main():
     """Main entry point for the CLI."""
     cli = ParadoxCLI()
-    cli.run()
-
+    return cli.run()
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
