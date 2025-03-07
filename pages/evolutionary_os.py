@@ -118,11 +118,22 @@ with col1:
                         crossover_rate=crossover_rate
                     )
                     
+                    # Record start time
+                    start_time = time.time()
+                    
                     # Run evolution
                     results = engine.evolve(
                         test_cases=st.session_state.test_cases,
                         generations=generations
                     )
+                    
+                    # Calculate execution time
+                    execution_time = time.time() - start_time
+                    
+                    # Enhance results with additional metrics
+                    results['execution_time'] = execution_time
+                    results['final_max_fitness'] = results['best_fitness']
+                    results['final_avg_fitness'] = results['avg_fitness']
                     
                     # Store in session state
                     st.session_state.engine = engine
