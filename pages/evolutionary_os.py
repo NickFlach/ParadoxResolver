@@ -545,7 +545,7 @@ if st.session_state.evolved_meta:
         phase = evolved_meta.phases[phase_name]
         
         # Get the transition targets
-        transitions = list(phase.transition_conditions.keys())
+        transitions = list(phase.transitions.keys())
         
         phases.append({
             "name": phase.name,
