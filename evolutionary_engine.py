@@ -120,11 +120,20 @@ class RuleGenome:
         
         # Perform crossover of components
         if not self.components or not other.components:
-            child.components = self.components or other.components
+            # If either parent has no components, use the other parent's components
+            child.components = self.components or other.components or []
+        elif len(self.components) <= 1 or len(other.components) <= 1:
+            # If either parent has only one component, combine them
+            child.components = self.components + other.components
         else:
-            # Single-point crossover
-            crossover_point = random.randint(1, min(len(self.components), len(other.components)) - 1)
-            child.components = self.components[:crossover_point] + other.components[crossover_point:]
+            # Safe single-point crossover
+            max_point = min(len(self.components), len(other.components)) - 1
+            if max_point < 1:  # Ensure we don't try to get a random int in empty range
+                # Just combine components if we can't do proper crossover
+                child.components = self.components + other.components
+            else:
+                crossover_point = random.randint(1, max_point)
+                child.components = self.components[:crossover_point] + other.components[crossover_point:]
         
         # Generate a new name based on ancestry
         parent_prefixes = []
@@ -447,7 +456,11 @@ class EvolutionaryEngine:
         if not self.rule_population:
             raise ValueError("Cannot select parent from empty population")
         
-        candidates = [g for g in self.rule_population if g != exclude]
+        # Create a list of candidates, excluding the specified genome if it's in the population
+        if exclude is None:
+            candidates = self.rule_population.copy()
+        else:
+            candidates = [g for g in self.rule_population if g is not exclude]
         
         if not candidates:
             # If all candidates excluded, just return a random one
@@ -456,6 +469,8 @@ class EvolutionaryEngine:
         # Tournament selection (select best of random subset)
         tournament_size = min(3, len(candidates))
         tournament = random.sample(candidates, tournament_size)
+        
+        # Return the candidate with the highest fitness
         return max(tournament, key=lambda x: x.fitness)
     
     def _calculate_diversity(self) -> float:

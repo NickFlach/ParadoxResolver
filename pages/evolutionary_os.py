@@ -108,29 +108,33 @@ with col1:
         start_button = st.button("Start Evolution", disabled=len(st.session_state.test_cases) == 0)
         
         if start_button:
-            with st.spinner(f"Running evolution for {generations} generations..."):
-                # Initialize the evolutionary engine
-                engine = EvolutionaryEngine(
-                    seed_rules=filtered_seed_rules,
-                    population_size=population_size,
-                    mutation_rate=mutation_rate,
-                    crossover_rate=crossover_rate
-                )
+            try:
+                with st.spinner(f"Running evolution for {generations} generations..."):
+                    # Initialize the evolutionary engine
+                    engine = EvolutionaryEngine(
+                        seed_rules=filtered_seed_rules,
+                        population_size=population_size,
+                        mutation_rate=mutation_rate,
+                        crossover_rate=crossover_rate
+                    )
+                    
+                    # Run evolution
+                    results = engine.evolve(
+                        test_cases=st.session_state.test_cases,
+                        generations=generations
+                    )
+                    
+                    # Store in session state
+                    st.session_state.engine = engine
+                    st.session_state.evolution_results = results
+                    
+                    # Create Meta-Resolver with evolved rules
+                    st.session_state.evolved_meta = engine.create_meta_resolver()
                 
-                # Run evolution
-                results = engine.evolve(
-                    test_cases=st.session_state.test_cases,
-                    generations=generations
-                )
-                
-                # Store in session state
-                st.session_state.engine = engine
-                st.session_state.evolution_results = results
-                
-                # Create Meta-Resolver with evolved rules
-                st.session_state.evolved_meta = engine.create_meta_resolver()
-            
-            st.success(f"Evolution completed in {results['execution_time']:.2f} seconds!")
+                st.success(f"Evolution completed in {results['execution_time']:.2f} seconds!")
+            except Exception as e:
+                st.error(f"Error during evolution: {str(e)}")
+                st.info("Try selecting different test cases or seed rules and try again.")
 
 with col2:
     st.header("Evolution Stats")
