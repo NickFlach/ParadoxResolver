@@ -21,13 +21,14 @@ def main():
     until an equilibrium state is reached.
     """)
     
-    # Header area with new Meta-Resolver announcement
+    # Header area with new Evolutionary OS announcement
     st.info("""
-    **🆕 New Feature: Meta-Resolver Framework**
+    **🧬 NEW: Evolutionary Engine Released!**
     
-    We've introduced a new framework to resolve the fundamental paradox between recursive resolution
-    and informational expansion. Check out the [Meta-Resolver Demo](/meta_resolver_demo) to see how
-    we transcend this core contradiction.
+    We've developed a revolutionary approach that generates novel solutions through genetic programming:
+    
+    * [Evolutionary OS](/evolutionary_os) - Our new engine evolves transformation rules and creates emergent innovation
+    * [Meta-Resolver Demo](/meta_resolver_demo) - Our solution to balance recursive resolution and informational expansion
     """)
     
     with st.sidebar:
@@ -52,12 +53,12 @@ def main():
             ["Line chart", "Bar chart", "Heatmap", "3D projection"]
         )
         
-        # Add a direct link to the Meta-Resolver page
+        # Add links to advanced features
         st.markdown("---")
         st.markdown("### Advanced Features")
         st.markdown("""
-        [Meta-Resolver Demo](/meta_resolver_demo) - Explore our solution to the 
-        core paradox between recursive resolution and informational expansion.
+        * [Evolutionary OS](/evolutionary_os) - Discover our evolutionary engine that generates novel transformation rules
+        * [Meta-Resolver Demo](/meta_resolver_demo) - Explore our solution to the core paradox
         """)
     
     # Main content area

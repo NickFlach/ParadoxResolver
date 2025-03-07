@@ -163,7 +163,16 @@ class MetaResolver:
             
             # Get updated state and add phase results
             result_data = phase_result["result"]
-            current_state = result_data["final_state"]
+            
+            # Extract final state based on what's available in the result
+            if "final_value" in result_data:
+                current_state = result_data["final_value"]
+            elif "final_state" in result_data:
+                current_state = result_data["final_state"]
+            else:
+                # If neither key exists, use the last state we had
+                pass
+                
             total_iterations += result_data.get("iterations", 0)
             
             # Record phase results
