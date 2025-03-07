@@ -21,6 +21,15 @@ def main():
     until an equilibrium state is reached.
     """)
     
+    # Header area with new Meta-Resolver announcement
+    st.info("""
+    **🆕 New Feature: Meta-Resolver Framework**
+    
+    We've introduced a new framework to resolve the fundamental paradox between recursive resolution
+    and informational expansion. Check out the [Meta-Resolver Demo](/meta_resolver_demo) to see how
+    we transcend this core contradiction.
+    """)
+    
     with st.sidebar:
         st.header("Configuration")
         
@@ -42,9 +51,17 @@ def main():
             "Visualization type:", 
             ["Line chart", "Bar chart", "Heatmap", "3D projection"]
         )
+        
+        # Add a direct link to the Meta-Resolver page
+        st.markdown("---")
+        st.markdown("### Advanced Features")
+        st.markdown("""
+        [Meta-Resolver Demo](/meta_resolver_demo) - Explore our solution to the 
+        core paradox between recursive resolution and informational expansion.
+        """)
     
     # Main content area
-    tabs = st.tabs(["Input Paradox", "Examples", "About"])
+    tabs = st.tabs(["Input Paradox", "Examples", "About", "Core Paradox"])
     
     with tabs[0]:
         st.header("Enter Your Paradox")
@@ -193,6 +210,52 @@ def main():
         - Governance systems with conflicting incentives
         - AI ethics dilemmas
         - Cryptographic protocol design
+        """)
+    
+    with tabs[3]:
+        st.header("The Core Paradox")
+        
+        st.markdown("""
+        ### The Fundamental Tension in Crypto_ParadoxOS
+        
+        Our system faces a deep architectural paradox between two competing goals:
+        
+        **Recursive Resolution (Convergence)** | **Informational Expansion (Divergence)**
+        -------------------------------------- | ---------------------------------------
+        Seeks to reach stable equilibrium | Generates new insights and approaches
+        Reduces complexity over iterations | Increases information content
+        Tends toward simplification | Tends toward elaboration
+        Aims for deterministic outcomes | Embraces probabilistic exploration
+        
+        These two approaches appear fundamentally contradictory - we can't simultaneously
+        converge and diverge, reduce and expand, simplify and elaborate.
+        
+        ### The Conventional Approach
+        
+        Traditional systems typically choose one approach:
+        
+        1. **Convergence-focused systems** like optimization algorithms prioritize finding
+           stable solutions but may miss creative alternatives
+        
+        2. **Divergence-focused systems** like generative AI generate novel outputs
+           but may struggle with consistency and stability
+        
+        ### Our Solution: The Meta-Resolver Framework
+        
+        We've developed a meta-level solution that transcends this contradiction by:
+        
+        1. **Embracing both approaches** as essential and complementary
+        
+        2. **Orchestrating dynamic transitions** between convergent and divergent phases
+        
+        3. **Employing phase-specific transformation rules** tailored to each mode
+        
+        4. **Using intelligent transition conditions** to determine when to switch modes
+        
+        This approach allows us to harmonize these competing forces into a unified framework
+        that leverages the strengths of both approaches while mitigating their weaknesses.
+        
+        [Try the Meta-Resolver Demo](/meta_resolver_demo) to see this approach in action.
         """)
 
 if __name__ == "__main__":
