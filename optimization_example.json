@@ -1,0 +1,82 @@
+{
+  "title": "Project Funding Allocation",
+  "description": "Allocation of resources across multiple projects with competing stakeholder interests",
+  "resources": [
+    {
+      "name": "Development Fund",
+      "total": 1000000,
+      "min_allocation": 200000
+    },
+    {
+      "name": "Marketing Budget",
+      "total": 500000,
+      "min_allocation": 100000
+    },
+    {
+      "name": "Research Grants",
+      "total": 750000,
+      "min_allocation": 150000
+    },
+    {
+      "name": "Community Rewards",
+      "total": 250000,
+      "min_allocation": 50000
+    }
+  ],
+  "stakeholders": [
+    {
+      "name": "Core Developers",
+      "influence": 0.4,
+      "preferences": {
+        "Development Fund": 0.6,
+        "Research Grants": 0.3,
+        "Community Rewards": 0.1,
+        "Marketing Budget": 0.0
+      }
+    },
+    {
+      "name": "Investors",
+      "influence": 0.3,
+      "preferences": {
+        "Marketing Budget": 0.5,
+        "Development Fund": 0.3,
+        "Research Grants": 0.2,
+        "Community Rewards": 0.0
+      }
+    },
+    {
+      "name": "Community",
+      "influence": 0.2,
+      "preferences": {
+        "Community Rewards": 0.4,
+        "Development Fund": 0.3,
+        "Marketing Budget": 0.2,
+        "Research Grants": 0.1
+      }
+    },
+    {
+      "name": "Research Partners",
+      "influence": 0.1,
+      "preferences": {
+        "Research Grants": 0.7,
+        "Development Fund": 0.2,
+        "Community Rewards": 0.1,
+        "Marketing Budget": 0.0
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "type": "min_allocation",
+      "resource": "Development Fund",
+      "amount": 200000,
+      "description": "Minimum required for ongoing development"
+    },
+    {
+      "type": "max_allocation",
+      "resource": "Marketing Budget",
+      "amount": 400000,
+      "description": "Maximum effective spending on marketing"
+    }
+  ]
+}
