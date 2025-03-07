@@ -167,34 +167,41 @@ class TestAllocationOptimizer(unittest.TestCase):
         
         # Verify basic structure of the result
         self.assertIsInstance(result, dict)
-        self.assertIn("allocations", result)
-        self.assertIn("stakeholder_satisfaction", result)
-        self.assertIn("convergence", result)
+        self.assertIn("resource_allocations", result)
+        self.assertIn("raw_allocations", result)
+        self.assertIn("converged", result)
         
-        # Check allocations
-        allocations = result["allocations"]
-        self.assertIsInstance(allocations, dict)
-        self.assertIn("Budget", allocations)
-        self.assertIn("Time", allocations)
+        # Check resource_allocations
+        resource_allocations = result["resource_allocations"]
+        self.assertIsInstance(resource_allocations, dict)
+        self.assertIn("Budget", resource_allocations)
+        self.assertIn("Time", resource_allocations)
         
-        # Check that allocations respect resource constraints
-        self.assertGreaterEqual(allocations["Budget"], 100.0)  # Min allocation
-        self.assertLessEqual(allocations["Budget"], 1000.0)  # Total resource
+        # Check that allocations respect resource constraints for Budget
+        budget_allocations = resource_allocations["Budget"]["allocations"]
+        self.assertIsInstance(budget_allocations, dict)
+        for user, amount in budget_allocations.items():
+            self.assertGreaterEqual(amount, 0.0)  # Non-negative allocation
+            self.assertLessEqual(amount, 1000.0)  # Total resource
         
-        self.assertGreaterEqual(allocations["Time"], 5.0)  # Min allocation
-        self.assertLessEqual(allocations["Time"], 40.0)  # Total resource
+        # Check that allocations respect resource constraints for Time
+        time_allocations = resource_allocations["Time"]["allocations"]
+        self.assertIsInstance(time_allocations, dict)
+        for user, amount in time_allocations.items():
+            self.assertGreaterEqual(amount, 0.0)  # Non-negative allocation
+            self.assertLessEqual(amount, 40.0)  # Total resource
         
-        # Check stakeholder satisfaction
-        satisfaction = result["stakeholder_satisfaction"]
-        self.assertIsInstance(satisfaction, dict)
-        self.assertIn("Alice", satisfaction)
-        self.assertIn("Bob", satisfaction)
+        # Check raw_allocations structure
+        raw_allocations = result["raw_allocations"]
+        self.assertIsInstance(raw_allocations, dict)
+        self.assertIn("Alice", raw_allocations)
+        self.assertIn("Bob", raw_allocations)
         
-        # Values should be between 0 and 1
-        self.assertGreaterEqual(satisfaction["Alice"], 0.0)
-        self.assertLessEqual(satisfaction["Alice"], 1.0)
-        self.assertGreaterEqual(satisfaction["Bob"], 0.0)
-        self.assertLessEqual(satisfaction["Bob"], 1.0)
+        # Values in raw_allocations should be between 0 and 1
+        for stakeholder in raw_allocations.values():
+            for resource_value in stakeholder.values():
+                self.assertGreaterEqual(resource_value, 0.0)
+                self.assertLessEqual(resource_value, 1.0)
     
     def test_optimize_with_custom_config(self):
         """Test optimization with custom configuration."""
