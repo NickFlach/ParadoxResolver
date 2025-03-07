@@ -178,8 +178,10 @@ class AllocationOptimizer:
                 
                 # Normalize to ensure allocations sum to original total
                 row_sums = np.sum(adjusted, axis=1, keepdims=True)
-                where_nonzero = row_sums > 0
-                adjusted[where_nonzero] = adjusted[where_nonzero] / row_sums[where_nonzero]
+                # Fix: handle normalization row by row to avoid dimension mismatch
+                for i in range(adjusted.shape[0]):
+                    if row_sums[i] > 0:
+                        adjusted[i, :] = adjusted[i, :] / row_sums[i]
                 
                 return adjusted
             return state
@@ -197,8 +199,10 @@ class AllocationOptimizer:
                 
                 # Ensure allocations sum to 1 per resource
                 col_sums = np.sum(state, axis=0, keepdims=True)
-                where_nonzero = col_sums > 0
-                state[:, where_nonzero[0]] = state[:, where_nonzero[0]] / col_sums[where_nonzero]
+                # Fix: handle normalization column by column to avoid dimension mismatch
+                for j in range(state.shape[1]):
+                    if col_sums[0, j] > 0:
+                        state[:, j] = state[:, j] / col_sums[0, j]
                 
                 return state
             return state
@@ -219,8 +223,10 @@ class AllocationOptimizer:
                 
                 # Normalize to maintain sum constraints
                 row_sums = np.sum(smoothed, axis=1, keepdims=True)
-                where_nonzero = row_sums > 0
-                smoothed[where_nonzero] = smoothed[where_nonzero] / row_sums[where_nonzero]
+                # Fix: handle normalization row by row to avoid dimension mismatch
+                for i in range(smoothed.shape[0]):
+                    if row_sums[i] > 0:
+                        smoothed[i, :] = smoothed[i, :] / row_sums[i]
                 
                 return smoothed
             return state
