@@ -115,7 +115,8 @@ class MetaResolver:
     def resolve(self, 
                initial_state: Any, 
                input_type: str,
-               max_phase_transitions: int = 10) -> Dict[str, Any]:
+               max_phase_transitions: int = 10,
+               max_total_iterations: int = 100) -> Dict[str, Any]:
         """
         Resolve a paradox using the meta-framework approach.
         
@@ -129,6 +130,7 @@ class MetaResolver:
             initial_state: The initial paradoxical state
             input_type: Type of the input ("numerical", "matrix", etc.)
             max_phase_transitions: Maximum number of phase transitions
+            max_total_iterations: Maximum total iterations across all phases
             
         Returns:
             Dictionary containing resolution results with phase information
@@ -140,9 +142,10 @@ class MetaResolver:
         state_history = [current_state]
         total_iterations = 0
         phase_transitions = 0
+        converged = False
         
         # Main resolution loop
-        while phase_transitions < max_phase_transitions:
+        while phase_transitions < max_phase_transitions and total_iterations < max_total_iterations:
             # Get the current phase
             current_phase = self.phases[current_phase_name]
             
@@ -160,18 +163,23 @@ class MetaResolver:
             # Create a resolver for this phase
             resolver = ParadoxResolver(
                 transformation_rules=selected_rules,
-                max_iterations=current_phase.max_iterations,
+                max_iterations=min(current_phase.max_iterations, max_total_iterations - total_iterations),
                 convergence_threshold=current_phase.threshold
             )
             
             # Execute this phase
-            result, steps, converged = resolver.resolve(current_state)
+            result, steps, phase_converged = resolver.resolve(current_state)
+            converged = phase_converged
             
             # Update state and history
             current_state = result
             state_history.extend(steps[1:])  # Skip first step (duplicate of current_state)
             total_iterations += len(steps) - 1
             
+            # Check if we've reached the max iterations
+            if total_iterations >= max_total_iterations:
+                break
+                
             # Check for transitions to other phases
             next_phase = None
             for target, condition in current_phase.transitions.items():
@@ -182,10 +190,13 @@ class MetaResolver:
             # If no transition conditions met
             if next_phase is None:
                 # If converged or diverged as expected, we're done
-                if converged == current_phase.is_convergent:
+                if phase_converged == current_phase.is_convergent:
                     break
                     
                 # Otherwise, stay in the same phase for another cycle
+                # Add a safety check to prevent infinite loops
+                if len(steps) <= 2:  # If no progress was made (only initial state + 1 iteration)
+                    break
                 continue
             
             # Move to the next phase
