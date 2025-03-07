@@ -255,7 +255,7 @@ with col1:
     st.subheader(f"Selected Framework: {framework_option}")
     
     if framework_option == "Standard":
-        st.image("https://via.placeholder.com/800x200?text=Standard+Framework+Visualization", use_column_width=True)
+        st.image("https://via.placeholder.com/800x200?text=Standard+Framework+Visualization", use_container_width=True)
         st.markdown("""
         The Standard framework balances convergence and expansion:
         1. **Initial Convergence**: Apply basic stabilization rules
