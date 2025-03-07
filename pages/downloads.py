@@ -72,16 +72,122 @@ with col2:
 
 # Usage instructions
 st.subheader("CLI Usage")
-st.code("""
-# Basic paradox resolution
-paradox_cli resolve --input "x = 1/x" --type numerical --iterations 20
 
-# Evolutionary engine
-paradox_cli evolve --generations 10 --population 20 --test-cases examples.json
+cli_tab1, cli_tab2, cli_tab3, cli_tab4 = st.tabs(["Basic Usage", "Paradox Resolution", "Evolutionary Engine", "Meta-Resolver"])
 
-# Meta-resolver with custom framework
-paradox_cli meta-resolve --input "[[0.7, 0.3], [0.4, 0.6]]" --type matrix --framework custom_framework.json
-""", language="bash")
+with cli_tab1:
+    st.markdown("""
+    Crypto_ParadoxOS CLI provides multiple commands for different functions:
+    
+    ```bash
+    # Get help on available commands
+    paradox_cli --help
+    
+    # Get help on a specific command
+    paradox_cli resolve --help
+    ```
+    
+    You can also run the example.py script to see a list of predefined paradoxes:
+    
+    ```bash
+    python examples.py
+    ```
+    """)
+
+with cli_tab2:
+    st.markdown("""
+    ### Paradox Resolution
+    
+    Resolve paradoxes using different transformation rules:
+    
+    ```bash
+    # Basic paradox resolution
+    paradox_cli resolve --input "x = 1/x" --type numerical --iterations 20
+    
+    # Specify initial value for numerical paradoxes
+    paradox_cli resolve --input "x = 1/x" --type numerical --initial-value 0.5
+    
+    # Resolve a matrix paradox
+    paradox_cli resolve --input "[[0.7, 0.3], [0.4, 0.6]]" --type matrix
+    
+    # Resolve a text-based paradox
+    paradox_cli resolve --input "This statement is false" --type text
+    
+    # Save results to a file
+    paradox_cli resolve --input "0.5" --type numerical --output results.json
+    ```
+    """)
+
+with cli_tab3:
+    st.markdown("""
+    ### Evolutionary Engine
+    
+    Generate novel transformation rules through evolutionary algorithms:
+    
+    ```bash
+    # Run evolution with default parameters
+    paradox_cli evolve
+    
+    # Specify generations and population size
+    paradox_cli evolve --generations 10 --population 20
+    
+    # Customize mutation and crossover rates
+    paradox_cli evolve --mutation-rate 0.3 --crossover-rate 0.7
+    
+    # Use custom test cases
+    paradox_cli evolve --test-cases examples.json
+    
+    # Save evolved rules to a file
+    paradox_cli evolve --output evolved_rules.json
+    ```
+    """)
+
+with cli_tab4:
+    st.markdown("""
+    ### Meta-Resolver Framework
+    
+    Use the meta-resolver to orchestrate complex resolution strategies:
+    
+    ```bash
+    # Use standard framework
+    paradox_cli meta-resolve --input "0.5" --type numerical
+    
+    # Specify framework type
+    paradox_cli meta-resolve --input "0.5" --type numerical --framework expansion
+    
+    # Use custom framework configuration
+    paradox_cli meta-resolve --input "[[0.7, 0.3], [0.4, 0.6]]" --type matrix --framework custom --config framework.json
+    
+    # Control maximum phase transitions
+    paradox_cli meta-resolve --input "0.5" --type numerical --max-transitions 5
+    
+    # Save results to a file
+    paradox_cli meta-resolve --input "0.5" --type numerical --output meta_results.json
+    ```
+    """)
+
+# Example using a predefined paradox
+st.subheader("Example with Predefined Paradoxes")
+st.markdown("""
+The CLI includes a set of predefined paradoxes for easy experimentation:
+
+```python
+# First list available paradoxes
+python examples.py
+
+# Then run one of the examples
+python paradox_cli.py resolve --input "x = 1/x" --type numerical --initial-value 0.5
+```
+
+Output:
+```
+Beginning resolution with 8 rules
+Initial state: x = 1/x
+Paradox resolved in 4 iterations!
+Final state: 0.0
+Processing time: 0.0001 seconds
+```
+""")
 
 # Technical Papers section
 st.header("Technical Papers")
