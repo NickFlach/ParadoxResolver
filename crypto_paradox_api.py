@@ -133,12 +133,17 @@ class CryptoParadoxAPI:
         """Initialize the API with default configuration."""
         self.jobs = {}  # Storage for all jobs by ID
         self.custom_rules = {}  # Storage for custom transformation rules
+        # These attributes are for test compatibility
+        self.transformation_rules = {}  # Alias for custom_rules for test compatibility
+        self.resolver = ParadoxResolver([])
         self.load_standard_rules()
         
     def load_standard_rules(self) -> None:
         """Load the standard transformation rules."""
         for rule in get_standard_rules():
             self.custom_rules[rule.name] = rule
+            # Also populate the test compatibility attribute
+            self.transformation_rules[rule.name] = rule
     
     def register_rule(self, 
                       name: str, 
@@ -154,6 +159,8 @@ class CryptoParadoxAPI:
         """
         rule = TransformationRule(name, transform_fn, description)
         self.custom_rules[name] = rule
+        # Also update the test compatibility attribute
+        self.transformation_rules[name] = rule
         print(f"Registered custom rule: {name}")
     
     def create_job(self, 
