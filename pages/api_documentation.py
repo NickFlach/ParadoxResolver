@@ -697,7 +697,7 @@ async fn main() {
         eprintln!("Error: {}", error);
     }
 }
-"""
+'''
     
     st.code(rust_example, language="rust")
 
