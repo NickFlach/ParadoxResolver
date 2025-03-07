@@ -39,6 +39,8 @@ class RuleGenome:
         self.components = components or []
         self.complexity = complexity
         self.fitness = fitness
+        self.ancestry = []  # List of parent rule names
+        self.generation = 0  # Generation this rule was created in
         
         # Initialize with default components if empty
         if not self.components:
@@ -497,11 +499,46 @@ class EvolutionaryEngine:
         # Initial fitness evaluation
         for genome in self.population:
             genome.fitness = self._evaluate_fitness(genome, test_cases)
+            genome.generation = 0  # Set initial generation
+        
+        # Track evolution history
+        history = {
+            'max_fitness': [],
+            'avg_fitness': [],
+            'diversity': [],
+            'novelty': []
+        }
+        
+        # Best fitness found so far
+        best_fitness = max(genome.fitness for genome in self.population)
+        avg_fitness = sum(genome.fitness for genome in self.population) / len(self.population)
         
         # Main evolution loop
         for generation in range(generations):
             # Sort by fitness (descending)
             self.population.sort(key=lambda g: g.fitness, reverse=True)
+            
+            # Record statistics
+            current_max_fitness = self.population[0].fitness
+            current_avg_fitness = sum(g.fitness for g in self.population) / len(self.population)
+            current_diversity = self._calculate_diversity()
+            
+            # Novelty is the relative improvement in fitness
+            novelty = 0
+            if generation > 0:
+                # Compare to previous generation
+                prev_max = history['max_fitness'][-1]
+                novelty = max(0, (current_max_fitness - prev_max) / max(0.001, prev_max))
+            
+            # Update history
+            history['max_fitness'].append(current_max_fitness)
+            history['avg_fitness'].append(current_avg_fitness)
+            history['diversity'].append(current_diversity)
+            history['novelty'].append(novelty)
+            
+            # Update best fitness
+            best_fitness = max(best_fitness, current_max_fitness)
+            avg_fitness = current_avg_fitness
             
             # Create next generation
             elite_count = int(self.population_size * self.elitism_ratio)
