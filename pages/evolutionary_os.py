@@ -411,6 +411,9 @@ if st.session_state.engine and st.session_state.evolution_results:
     with rule_tabs[2]:
         st.subheader("Test Evolved Rules")
         
+        # Initialize current_test to prevent unbound variable errors
+        current_test = None
+        
         # Input for testing
         test_input_type = st.selectbox(
             "Select input type:",
@@ -748,7 +751,8 @@ if st.session_state.evolved_meta:
                 st.write(f"- Input type: {input_type}")
                 st.write(f"- Input value type: {type(meta_current_test).__name__}")
                 
-                if input_type == "matrix" and hasattr(meta_current_test, 'shape'):
+                # Check if we have a matrix with a shape attribute
+                if meta_current_test is not None and input_type == "matrix" and hasattr(meta_current_test, 'shape'):
                     st.write(f"- Matrix shape: {meta_current_test.shape}")
                 
                 # Suggest fixes

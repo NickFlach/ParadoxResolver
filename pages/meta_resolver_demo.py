@@ -86,34 +86,40 @@ def visualize_meta_resolution(result, input_type="numerical"):
                 # Create node labels
                 unique_phases = list(set(phase_history))
                 node_colors = ["blue" if "convergent" in p.lower() else "orange" if "divergent" in p.lower() else "green" for p in unique_phases]
+                
+                # Initialize Sankey diagram parameters
+                pad = 15
+                thickness = 20
+                line = dict(color="black", width=0.5)
+                color = node_colors
             
-            # Create links between consecutive phases
-            source = []
-            target = []
-            values = []
+                # Create links between consecutive phases
+                source = []
+                target = []
+                values = []
+                
+                for i in range(len(phase_history) - 1):
+                    src_idx = unique_phases.index(phase_history[i])
+                    tgt_idx = unique_phases.index(phase_history[i+1])
+                    source.append(src_idx)
+                    target.append(tgt_idx)
+                    values.append(10)  # Fixed value for visualization
             
-            for i in range(len(phase_history) - 1):
-                src_idx = unique_phases.index(phase_history[i])
-                tgt_idx = unique_phases.index(phase_history[i+1])
-                source.append(src_idx)
-                target.append(tgt_idx)
-                values.append(10)  # Fixed value for visualization
-            
-            # Create Sankey diagram
-            fig = go.Figure(data=[go.Sankey(
-                node=dict(
-                    pad=15,
-                    thickness=20,
-                    line=dict(color="black", width=0.5),
-                    label=unique_phases,
-                    color=node_colors
-                ),
-                link=dict(
-                    source=source,
-                    target=target,
-                    value=values
-                )
-            )])
+                # Create Sankey diagram
+                fig = go.Figure(data=[go.Sankey(
+                    node=dict(
+                        pad=pad,
+                        thickness=thickness,
+                        line=line,
+                        label=unique_phases,
+                        color=node_colors
+                    ),
+                    link=dict(
+                        source=source,
+                        target=target,
+                        value=values
+                    )
+                )])
             
             fig.update_layout(
                 title_text="Phase Transition Flow",
@@ -131,6 +137,10 @@ def visualize_meta_resolution(result, input_type="numerical"):
         else:
             # Prepare dataframe with essential columns
             try:
+                # Ensure phases_df is defined
+                if 'phases_df' not in locals():
+                    phases_df = pd.DataFrame(phase_results)
+                
                 # Enhance the dataframe with more readable info
                 if "is_convergent" in phases_df.columns:
                     phases_df["Convergent"] = phases_df["is_convergent"].apply(lambda x: "Yes" if x else "No")
