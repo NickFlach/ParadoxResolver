@@ -2,11 +2,17 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import time
 
 from meta_resolver import MetaResolver, ResolutionPhase
 from crypto_paradox_api import CryptoParadoxAPI
 from visualization import visualize_resolution_steps
+
+# Initialize variables to avoid unbound variable errors
+result = None
+phases_df = None
+paradox_input = 0.5  # Default value if not set in input method
 
 st.set_page_config(
     page_title="Meta-Resolver: Resolving the Core Paradox",
