@@ -1121,7 +1121,7 @@ evolution_result = integration.evolve_rules(
     that extends the base ParadoxIntegration class:
     """)
     
-    st.code("""
+    st.code('''
     from integration.common.integration_core import ParadoxIntegration, IntegrationConfig
     
     class MyCustomIntegration(ParadoxIntegration):
@@ -1154,7 +1154,7 @@ evolution_result = integration.evolve_rules(
             processed_data = self._convert_from_matrix(result.get('final_state'))
             
             return processed_data
-    """, language="python")
+    ''', language="python")
     
     # Getting help
     st.subheader("Getting Help")
