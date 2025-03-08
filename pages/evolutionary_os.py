@@ -525,6 +525,11 @@ if st.session_state.engine and st.session_state.evolution_results:
                         st.error(f"Error applying rule: {str(e)}")
 
 # Meta-Resolver with Evolved Rules
+
+# Initialize variables that might be used before assignment to prevent unbound variable errors
+meta_current_test = None
+input_type = "numerical"  # Default input type for meta-resolver
+
 if st.session_state.evolved_meta:
     st.header("Evolutionary Meta-Resolver")
     
