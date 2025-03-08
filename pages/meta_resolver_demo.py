@@ -120,14 +120,17 @@ def visualize_meta_resolution(result, input_type="numerical"):
                         value=values
                     )
                 )])
-            
-            fig.update_layout(
-                title_text="Phase Transition Flow",
-                font_size=12,
-                height=400
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
+                
+                fig.update_layout(
+                    title_text="Phase Transition Flow",
+                    font_size=12,
+                    height=400
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                # If no phase transitions, show a placeholder
+                st.info("Not enough phase transitions to display a flow diagram.")
         
         # Show phase details in a table
         st.subheader("Phase Details")
