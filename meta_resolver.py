@@ -204,12 +204,23 @@ class MetaResolver:
             phase_history.append(current_phase_name)
             phase_transitions += 1
         
+        # Prepare phase results
+        phase_results = []
+        for phase_name in phase_history:
+            phase_results.append({
+                "phase": phase_name,
+                "iterations": self.phases[phase_name].max_iterations,
+                "is_convergent": self.phases[phase_name].is_convergent,
+                "type": "Convergent" if self.phases[phase_name].is_convergent else "Divergent"
+            })
+        
         # Create result dictionary
         result = {
             "final_state": current_state,
             "total_iterations": total_iterations,
             "phase_transitions": phase_transitions,
             "phase_history": phase_history,
+            "phase_results": phase_results,  # Add phase results for visualization
             "converged": converged
         }
         

@@ -68,21 +68,24 @@ def visualize_meta_resolution(result, input_type="numerical"):
     # Create tabs for different visualizations
     tabs = st.tabs(["Phase Transitions", "Convergence Analysis", "State Evolution"])
     
-    # Extract data
-    phase_history = result["phase_history"]
-    phase_results = result["phase_results"]
+    # Extract data safely with defaults
+    phase_history = result.get("phase_history", [])
+    phase_results = result.get("phase_results", [])
     
     with tabs[0]:
         st.subheader("Phase Transition Flow")
         
-        # Create a horizontal flow visualization
-        phases_df = pd.DataFrame(phase_results)
-        
-        # Create a Sankey diagram for phase transitions
-        if len(phase_history) > 1:
-            # Create node labels
-            unique_phases = list(set(phase_history))
-            node_colors = ["blue" if "Convergence" in p else "orange" if "Expansion" in p else "green" for p in unique_phases]
+        if not phase_results:
+            st.info("No phase transitions to display.")
+        else:
+            # Create a horizontal flow visualization
+            phases_df = pd.DataFrame(phase_results)
+            
+            # Create a Sankey diagram for phase transitions
+            if len(phase_history) > 1:
+                # Create node labels
+                unique_phases = list(set(phase_history))
+                node_colors = ["blue" if "convergent" in p.lower() else "orange" if "divergent" in p.lower() else "green" for p in unique_phases]
             
             # Create links between consecutive phases
             source = []
@@ -123,57 +126,85 @@ def visualize_meta_resolution(result, input_type="numerical"):
         # Show phase details in a table
         st.subheader("Phase Details")
         
-        # Enhance the dataframe with more readable info
-        phases_df["Convergent"] = phases_df["is_convergent_phase"].apply(lambda x: "Yes" if x else "No")
-        phases_df["Result"] = phases_df["converged"].apply(lambda x: "Converged" if x else "Did not converge")
-        
-        # Show the table with selected columns
-        st.dataframe(
-            phases_df[["phase", "Convergent", "iterations", "Result"]],
-            use_container_width=True
-        )
+        if not phase_results:
+            st.info("No phase details to display.")
+        else:
+            # Prepare dataframe with essential columns
+            try:
+                # Enhance the dataframe with more readable info
+                if "is_convergent" in phases_df.columns:
+                    phases_df["Convergent"] = phases_df["is_convergent"].apply(lambda x: "Yes" if x else "No")
+                else:
+                    phases_df["Convergent"] = "Unknown"
+                
+                if "converged" in phases_df.columns:
+                    phases_df["Result"] = phases_df["converged"].apply(lambda x: "Converged" if x else "Did not converge")
+                else:
+                    phases_df["Result"] = "Unknown"
+                
+                # Show the table with selected columns
+                columns_to_display = ["phase"]
+                if "Convergent" in phases_df.columns:
+                    columns_to_display.append("Convergent")
+                if "iterations" in phases_df.columns:
+                    columns_to_display.append("iterations")
+                if "Result" in phases_df.columns:
+                    columns_to_display.append("Result")
+                
+                st.dataframe(phases_df[columns_to_display], use_container_width=True)
+            except Exception as e:
+                st.error(f"Error displaying phase details: {str(e)}")
+                st.write(phases_df)
     
     with tabs[1]:
         st.subheader("Convergence Analysis")
         
-        # Show convergence metrics for each phase
-        fig = go.Figure()
-        
-        # Add bars for iterations
-        fig.add_trace(go.Bar(
-            x=[p["phase"] for p in phase_results],
-            y=[p["iterations"] for p in phase_results],
-            name="Iterations",
-            marker_color=["blue" if p["is_convergent_phase"] else "orange" for p in phase_results]
-        ))
-        
-        # Add points for convergence status
-        fig.add_trace(go.Scatter(
-            x=[p["phase"] for p in phase_results],
-            y=[p["iterations"] * 1.1 if p["converged"] else 0 for p in phase_results],
-            mode="markers",
-            name="Converged",
-            marker=dict(
-                symbol="star",
-                size=12,
-                color=["green" if p["converged"] else "red" for p in phase_results]
-            )
-        ))
-        
-        fig.update_layout(
-            title="Iterations and Convergence by Phase",
-            xaxis_title="Phase",
-            yaxis_title="Iterations",
-            legend_title="Legend",
-            barmode="group"
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        if not phase_results:
+            st.info("No convergence data to display.")
+        else:
+            try:
+                # Show convergence metrics for each phase
+                fig = go.Figure()
+                
+                # Add bars for iterations
+                fig.add_trace(go.Bar(
+                    x=[p.get("phase", f"Phase {i}") for i, p in enumerate(phase_results)],
+                    y=[p.get("iterations", 0) for p in phase_results],
+                    name="Iterations",
+                    marker_color=["blue" if p.get("is_convergent", True) else "orange" for p in phase_results]
+                ))
+                
+                # Add points for convergence status (if available)
+                if any("converged" in p for p in phase_results):
+                    fig.add_trace(go.Scatter(
+                        x=[p.get("phase", f"Phase {i}") for i, p in enumerate(phase_results)],
+                        y=[p.get("iterations", 0) * 1.1 if p.get("converged", False) else 0 for p in phase_results],
+                        mode="markers",
+                        name="Converged",
+                        marker=dict(
+                            symbol="star",
+                            size=12,
+                            color=["green" if p.get("converged", False) else "red" for p in phase_results]
+                        )
+                    ))
+                
+                fig.update_layout(
+                    title="Iterations and Convergence by Phase",
+                    xaxis_title="Phase",
+                    yaxis_title="Iterations",
+                    legend_title="Legend",
+                    barmode="group"
+                )
+                
+                st.plotly_chart(fig, use_container_width=True)
+            except Exception as e:
+                st.error(f"Error displaying convergence analysis: {str(e)}")
+                st.write("Raw phase data:", phase_results)
         
         # Show final result
-        st.write(f"**Total Iterations:** {result['total_iterations']}")
-        st.write(f"**Final State:** {result['final_state']}")
-        st.write(f"**Meta-Converged:** {'Yes' if result['meta_converged'] else 'No'}")
+        st.write(f"**Total Iterations:** {result.get('total_iterations', 'Unknown')}")
+        st.write(f"**Final State:** {result.get('final_state', 'Unknown')}")
+        st.write(f"**Meta-Converged:** {'Yes' if result.get('converged', False) else 'No'}")
     
     with tabs[2]:
         st.subheader("State Evolution")
@@ -181,8 +212,22 @@ def visualize_meta_resolution(result, input_type="numerical"):
         # Create a visualization of state evolution
         # This is simplified - in a real implementation we would track the state at each phase
         
-        # For demonstration purposes, visualize the final state
-        visualize_resolution_steps([result['final_state']], viz_type="Line chart", dimension=dimension)
+        try:
+            # For demonstration purposes, visualize the final state if available
+            if 'final_state' in result:
+                # Default dimension to 1 if not specified
+                dimension = 1
+                if input_type == "matrix" and isinstance(result['final_state'], (list, np.ndarray)):
+                    # Estimate dimension from the final state if it's a matrix
+                    dimension = 2
+                
+                # Import visualization function if not already imported
+                from visualization import visualize_resolution_steps
+                visualize_resolution_steps([result['final_state']], viz_type="Line chart", dimension=dimension)
+            else:
+                st.warning("No final state available to visualize.")
+        except Exception as e:
+            st.error(f"Error visualizing state evolution: {str(e)}")
         
         st.info("In a full implementation, this tab would show the evolution of the state across all phases.")
 
