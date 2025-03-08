@@ -117,8 +117,7 @@ with tabs[0]:
     
     fig.update_layout(
         title_text="Crypto_ParadoxOS Integration Architecture",
-        font_size=12,
-        height=400
+        font_size=12
     )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -233,7 +232,7 @@ with tabs[1]:
                 title="Original Musical Structure"
             )
             
-            fig1.update_layout(height=300)
+            fig1.update_layout()
             st.plotly_chart(fig1, use_container_width=True)
             
         with col2:
@@ -248,7 +247,7 @@ with tabs[1]:
                 title="Enhanced Musical Structure"
             )
             
-            fig2.update_layout(height=300)
+            fig2.update_layout()
             st.plotly_chart(fig2, use_container_width=True)
         
         # Structure flow visualization
@@ -301,7 +300,6 @@ with tabs[1]:
                 showgrid=False,
                 zeroline=False
             ),
-            height=300,
             barmode='overlay',
             legend=dict(
                 orientation="h",
@@ -378,7 +376,7 @@ with tabs[1]:
                 title="Original Envelopes",
                 xaxis_title="Time",
                 yaxis_title="Value",
-                height=250
+                
             )
             
             st.plotly_chart(fig1, use_container_width=True)
@@ -409,7 +407,7 @@ with tabs[1]:
                 title="Transformed Envelopes",
                 xaxis_title="Time",
                 yaxis_title="Value",
-                height=250
+                
             )
             
             st.plotly_chart(fig2, use_container_width=True)
@@ -476,7 +474,7 @@ with tabs[1]:
                 )
             ),
             showlegend=True,
-            height=450
+            
         )
         
         st.plotly_chart(fig3, use_container_width=True)
@@ -547,7 +545,7 @@ with tabs[1]:
                 zaxis=dict(range=[-1, 1], title="Z"),
                 aspectmode='cube'
             ),
-            height=500
+            
         )
         
         st.plotly_chart(fig4, use_container_width=True)
@@ -759,7 +757,7 @@ with tabs[2]:
             yaxis_title="Truth Value",
             yaxis=dict(range=[0, 1]),
             barmode="group",
-            height=400
+            
         )
         
         st.plotly_chart(fig1, use_container_width=True)
@@ -865,7 +863,7 @@ with tabs[2]:
             title=f"{pattern_name} Pattern Refinement",
             xaxis_title="Time",
             yaxis_title="Value",
-            height=400
+            
         )
         
         st.plotly_chart(fig1, use_container_width=True)
@@ -891,7 +889,7 @@ with tabs[2]:
             title="Noise Reduction Comparison",
             xaxis_title="Pattern",
             yaxis_title="Average Noise Level",
-            height=300
+            
         )
         
         noise_reduction = 100 * (1 - refined_noise.mean() / orig_noise.mean())
@@ -940,7 +938,7 @@ with tabs[2]:
         
         fig3.update_layout(
             title="Pattern Set Visualization",
-            height=300
+            
         )
         
         st.plotly_chart(fig3, use_container_width=True)
@@ -970,7 +968,7 @@ with tabs[2]:
         
         fig4.update_layout(
             title="Pattern Distance Matrix",
-            height=500
+            
         )
         
         col1, col2 = st.columns([3, 1])
