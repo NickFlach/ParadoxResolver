@@ -49,15 +49,60 @@ def convert_steps_to_numeric(steps: List[Any], dimension: int) -> Union[np.ndarr
     Returns:
         Numpy array of numeric values or None if conversion not possible
     """
+    # Handle empty list
+    if not steps:
+        return None
+        
+    # Special handling for a single value
+    if len(steps) == 1:
+        # If it's a single numeric value, convert to a 1-element array
+        if isinstance(steps[0], (int, float)):
+            return np.array([steps[0]]).reshape(1, 1)
+        # If it's a numpy array, wrap it
+        elif isinstance(steps[0], np.ndarray):
+            try:
+                flat_val = steps[0].flatten()
+                return flat_val.reshape(1, len(flat_val))
+            except Exception as e:
+                st.error(f"Error reshaping numpy array: {e}")
+                return np.array([0]).reshape(1, 1)  # Fallback
+        # If it's a list or tuple of numbers
+        elif isinstance(steps[0], (list, tuple)) and all(isinstance(val, (int, float)) for val in steps[0]):
+            return np.array([steps[0]]).reshape(1, len(steps[0]))
+        # If it's a dict with numeric values
+        elif isinstance(steps[0], dict) and all(isinstance(val, (int, float)) for val in steps[0].values()):
+            vals = list(steps[0].values())
+            return np.array([vals]).reshape(1, len(vals))
+        # If it's a string
+        elif isinstance(steps[0], str):
+            return np.array([len(steps[0]) + steps[0].count(" ") * 0.5]).reshape(1, 1)
+    
+    # Multiple values handling
     if all(isinstance(step, (int, float)) for step in steps):
         # 1D numerical values
-        return np.array(steps)
+        return np.array(steps).reshape(len(steps), 1)
     
     elif all(isinstance(step, np.ndarray) for step in steps):
         # Handle matrix evolution
-        shapes = set(step.shape for step in steps)
-        if len(shapes) == 1:  # All have same shape
-            return np.array([step.flatten() for step in steps])
+        try:
+            shapes = set(step.shape for step in steps if hasattr(step, 'shape'))
+            if len(shapes) == 1:  # All have same shape
+                return np.array([step.flatten() for step in steps])
+            else:
+                # Handle different shaped arrays by padding
+                max_size = max(np.prod(step.shape) if hasattr(step, 'shape') else 1 for step in steps)
+                padded = []
+                for step in steps:
+                    if hasattr(step, 'flatten'):
+                        flat = step.flatten()
+                        padded.append(np.pad(flat, (0, max_size - flat.size), 'constant', constant_values=np.nan))
+                    else:
+                        padded.append(np.array([step]).flatten())
+                return np.array(padded)
+        except Exception as e:
+            # Safely handle any numpy array manipulation errors
+            st.error(f"Error processing numpy arrays: {str(e)}")
+            return np.zeros((len(steps), 1))  # Fallback
     
     elif all(isinstance(step, (list, tuple)) for step in steps) and all(
             all(isinstance(val, (int, float)) for val in step) for step in steps):
@@ -76,15 +121,16 @@ def convert_steps_to_numeric(steps: List[Any], dimension: int) -> Union[np.ndarr
     
     elif all(isinstance(step, str) for step in steps):
         # For strings, try to extract numeric patterns
-        # This is a simple implementation; in a real system, this would be more sophisticated
         try:
             # Try to calculate a complexity measure for each string
             complexity = [len(step) + step.count(" ") * 0.5 for step in steps]
-            return np.array(complexity)
-        except:
-            return None
+            return np.array(complexity).reshape(len(steps), 1)
+        except Exception as e:
+            st.error(f"Error processing string metrics: {str(e)}")
+            return np.zeros((len(steps), 1))  # Fallback
     
-    return None
+    # If nothing else worked, provide a safe fallback
+    return np.zeros((len(steps), 1))
 
 def create_line_chart(data: np.ndarray):
     """Create a line chart visualization of the resolution steps."""
