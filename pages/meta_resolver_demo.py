@@ -71,6 +71,11 @@ with st.sidebar:
 
 # Create dynamic visualization of the meta-resolution process
 def visualize_meta_resolution(result, input_type="numerical"):
+    # Safety check - ensure result is not None
+    if result is None:
+        st.warning("No resolution result to visualize.")
+        return
+        
     # Create tabs for different visualizations
     tabs = st.tabs(["Phase Transitions", "Convergence Analysis", "State Evolution"])
     
@@ -85,7 +90,8 @@ def visualize_meta_resolution(result, input_type="numerical"):
             st.info("No phase transitions to display.")
         else:
             # Create a horizontal flow visualization
-            phases_df = pd.DataFrame(phase_results)
+            # Create a fresh dataframe for this scope
+            sankey_phases_df = pd.DataFrame(phase_results)
             
             # Create a Sankey diagram for phase transitions
             if len(phase_history) > 1:
@@ -146,34 +152,36 @@ def visualize_meta_resolution(result, input_type="numerical"):
         else:
             # Prepare dataframe with essential columns
             try:
-                # Ensure phases_df is defined
-                if 'phases_df' not in locals():
-                    phases_df = pd.DataFrame(phase_results)
+                # Always recreate the dataframe here to avoid reference issues
+                local_phases_df = pd.DataFrame(phase_results)
                 
                 # Enhance the dataframe with more readable info
-                if "is_convergent" in phases_df.columns:
-                    phases_df["Convergent"] = phases_df["is_convergent"].apply(lambda x: "Yes" if x else "No")
+                if "is_convergent" in local_phases_df.columns:
+                    local_phases_df["Convergent"] = local_phases_df["is_convergent"].apply(lambda x: "Yes" if x else "No")
                 else:
-                    phases_df["Convergent"] = "Unknown"
+                    local_phases_df["Convergent"] = "Unknown"
                 
-                if "converged" in phases_df.columns:
-                    phases_df["Result"] = phases_df["converged"].apply(lambda x: "Converged" if x else "Did not converge")
+                if "converged" in local_phases_df.columns:
+                    local_phases_df["Result"] = local_phases_df["converged"].apply(lambda x: "Converged" if x else "Did not converge")
                 else:
-                    phases_df["Result"] = "Unknown"
+                    local_phases_df["Result"] = "Unknown"
                 
                 # Show the table with selected columns
                 columns_to_display = ["phase"]
-                if "Convergent" in phases_df.columns:
+                if "Convergent" in local_phases_df.columns:
                     columns_to_display.append("Convergent")
-                if "iterations" in phases_df.columns:
+                if "iterations" in local_phases_df.columns:
                     columns_to_display.append("iterations")
-                if "Result" in phases_df.columns:
+                if "Result" in local_phases_df.columns:
                     columns_to_display.append("Result")
                 
-                st.dataframe(phases_df[columns_to_display], use_container_width=True)
+                st.dataframe(local_phases_df[columns_to_display], use_container_width=True)
             except Exception as e:
                 st.error(f"Error displaying phase details: {str(e)}")
-                st.write(phases_df)
+                if 'local_phases_df' in locals():
+                    st.write(local_phases_df)
+                else:
+                    st.write("Could not create phase dataframe.")
     
     with tabs[1]:
         st.subheader("Convergence Analysis")
@@ -537,7 +545,7 @@ with col2:
             st.metric("Total Iterations", result['total_iterations'])
 
 # Once resolution is complete, show detailed visualizations
-if 'result' in locals():
+if result is not None:
     st.header("Meta-Resolution Analysis")
     visualize_meta_resolution(result, input_method.lower())
     
