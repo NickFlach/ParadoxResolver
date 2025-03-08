@@ -313,7 +313,42 @@ with col1:
     st.subheader(f"Selected Framework: {framework_option}")
     
     if framework_option == "Standard":
-        st.image("https://via.placeholder.com/800x200?text=Standard+Framework+Visualization", use_container_width=True)
+        # Create a visualization of the Standard framework using plotly
+        framework_phases = ["Initial Convergence", "Information Expansion", "Integration Refinement", "Final Convergence"]
+        phase_types = ["Convergent", "Divergent", "Convergent", "Convergent"]
+        rule_counts = [2, 3, 2, 2]
+        
+        # Create node labels and colors
+        node_colors = ["blue" if ptype == "Convergent" else "orange" for ptype in phase_types]
+        
+        # Create links between phases
+        sources = [0, 1, 2]  # Source indices
+        targets = [1, 2, 3]  # Target indices (next phase)
+        values = [1, 1, 1]   # Link weights
+        
+        # Create Sankey diagram for framework visualization
+        fig = go.Figure(data=[go.Sankey(
+            node=dict(
+                pad=15,
+                thickness=20,
+                line=dict(color="black", width=0.5),
+                label=framework_phases,
+                color=node_colors
+            ),
+            link=dict(
+                source=sources,
+                target=targets,
+                value=values
+            )
+        )])
+        
+        fig.update_layout(
+            title_text="Standard Framework Process Flow",
+            font_size=12,
+            height=250
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
         st.markdown("""
         The Standard framework balances convergence and expansion:
         1. **Initial Convergence**: Apply basic stabilization rules
@@ -323,6 +358,42 @@ with col1:
         """)
     
     elif framework_option == "Convergence Heavy":
+        # Create a visualization of the Convergence Heavy framework
+        framework_phases = ["Initial Assessment", "Deep Convergence", "Maintenance"]
+        phase_types = ["Convergent", "Convergent", "Convergent"]
+        
+        # Create node labels and colors
+        node_colors = ["blue" for _ in phase_types]  # All blue for convergent phases
+        
+        # Create links between phases
+        sources = [0, 1]  # Source indices
+        targets = [1, 2]  # Target indices (next phase)
+        values = [1, 1]   # Link weights
+        
+        # Create Sankey diagram for framework visualization
+        fig = go.Figure(data=[go.Sankey(
+            node=dict(
+                pad=15,
+                thickness=20,
+                line=dict(color="black", width=0.5),
+                label=framework_phases,
+                color=node_colors
+            ),
+            link=dict(
+                source=sources,
+                target=targets,
+                value=values
+            )
+        )])
+        
+        fig.update_layout(
+            title_text="Convergence Heavy Framework",
+            font_size=12,
+            height=250
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
         st.markdown("""
         The Convergence Heavy framework prioritizes stabilization:
         1. **Initial Assessment**: Quick evaluation of the paradox
@@ -331,6 +402,42 @@ with col1:
         """)
     
     elif framework_option == "Expansion Heavy":
+        # Create a visualization of the Expansion Heavy framework
+        framework_phases = ["Initial Assessment", "Divergent Expansion", "Creative Transformation", "Integration"]
+        phase_types = ["Convergent", "Divergent", "Divergent", "Convergent"]
+        
+        # Create node labels and colors
+        node_colors = ["blue" if ptype == "Convergent" else "orange" for ptype in phase_types]
+        
+        # Create links between phases
+        sources = [0, 1, 2]  # Source indices
+        targets = [1, 2, 3]  # Target indices (next phase)
+        values = [1, 1, 1]   # Link weights
+        
+        # Create Sankey diagram for framework visualization
+        fig = go.Figure(data=[go.Sankey(
+            node=dict(
+                pad=15,
+                thickness=20,
+                line=dict(color="black", width=0.5),
+                label=framework_phases,
+                color=node_colors
+            ),
+            link=dict(
+                source=sources,
+                target=targets,
+                value=values
+            )
+        )])
+        
+        fig.update_layout(
+            title_text="Expansion Heavy Framework",
+            font_size=12,
+            height=250
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
         st.markdown("""
         The Expansion Heavy framework prioritizes generative exploration:
         1. **Initial Assessment**: Quick evaluation of the paradox
@@ -340,8 +447,57 @@ with col1:
         """)
     
     elif framework_option == "Custom":
+        # Create an interactive visualization of the custom framework
+        st.info("The custom framework is currently using the standard configuration. In a production environment, this would include interactive phase creation.")
+        
+        # Show an example of a customizable framework
+        cols = st.columns(4)
+        with cols[0]:
+            st.metric("Convergent Phases", "2")
+        with cols[1]:
+            st.metric("Divergent Phases", "2")
+        with cols[2]:
+            st.metric("Total Rules", "9")
+        with cols[3]:
+            st.metric("Transition Types", "3")
+        
+        # Simple visualization for Custom framework (using the standard as a base)
+        framework_phases = ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]
+        phase_types = ["Convergent", "Divergent", "Divergent", "Convergent"]
+        
+        # Create node labels and colors
+        node_colors = ["blue" if ptype == "Convergent" else "orange" for ptype in phase_types]
+        
+        # Create links between phases with different paths (more complex)
+        sources = [0, 0, 1, 2, 3]  # Source indices
+        targets = [1, 2, 3, 3, 0]  # Target indices (showing a cycle)
+        values = [0.7, 0.3, 0.6, 1, 0.2]  # Different link weights
+        
+        # Create Sankey diagram for framework visualization
+        fig = go.Figure(data=[go.Sankey(
+            node=dict(
+                pad=15,
+                thickness=20,
+                line=dict(color="black", width=0.5),
+                label=framework_phases,
+                color=node_colors
+            ),
+            link=dict(
+                source=sources,
+                target=targets,
+                value=values
+            )
+        )])
+        
+        fig.update_layout(
+            title_text="Potential Custom Framework with Complex Transitions",
+            font_size=12,
+            height=250
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
         st.markdown("""
-        Custom framework currently using the standard configuration.
         In a full implementation, users could customize:
         - Number and types of phases
         - Rules applied in each phase

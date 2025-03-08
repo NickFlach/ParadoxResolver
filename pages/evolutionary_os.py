@@ -570,47 +570,70 @@ if st.session_state.evolved_meta:
     # Create a flow diagram visualization
     st.subheader("Phase Flow")
     
-    # Create a horizontal flow visualization
-    phase_flow_html = """
-    <div style="display: flex; flex-direction: row; overflow-x: auto; padding: 10px;">
-    """
-    
-    for i, phase in enumerate(phases):
-        # Determine color based on phase type
-        color = "#e6f3ff" if phase["type"] == "Convergent" else "#fff0e6"
-        border = "#0066cc" if phase["type"] == "Convergent" else "#cc6600"
+    if len(phases) > 0:
+        # Create a Plotly diagram instead of HTML
+        # Extract data for visualization
+        phase_names = [phase["name"] for phase in phases]
+        node_colors = ["#0066cc" if phase["type"] == "Convergent" else "#cc6600" for phase in phases]
         
-        # Add node
-        phase_flow_html += f"""
-        <div style="display: flex; flex-direction: column; align-items: center; margin: 0 5px; min-width: 150px;">
-            <div style="background-color: {color}; border: 2px solid {border}; border-radius: 8px; padding: 10px; text-align: center; width: 100%;">
-                <div style="font-weight: bold;">{phase["name"]}</div>
-                <div style="font-size: 0.8em;">{phase["type"]}</div>
-                <div style="font-size: 0.8em;">Rules: {phase["rules"]}</div>
-            </div>
-        """
+        # Create sources and targets for arrows
+        sources = []
+        targets = []
+        values = []
         
-        # Add connector
-        if i < len(phases) - 1:
-            next_phase = phases[i+1]["name"]
-            if next_phase in phase["transitions"]:
-                phase_flow_html += """
-                <div style="display: flex; justify-content: center; padding: 5px;">
-                    <div style="color: #666;">→</div>
-                </div>
-                """
-            else:
-                phase_flow_html += """
-                <div style="display: flex; justify-content: center; padding: 5px;">
-                    <div style="color: #ccc;">⤑</div>
-                </div>
-                """
+        for i, phase in enumerate(phases):
+            if i < len(phases) - 1:
+                next_phase = phases[i+1]["name"]
+                if next_phase in phase.get("transitions", ""):
+                    sources.append(i)
+                    targets.append(i+1)
+                    values.append(1)  # Standard weight for all connections
         
-        phase_flow_html += "</div>"
-    
-    phase_flow_html += "</div>"
-    
-    st.markdown(phase_flow_html, unsafe_allow_html=True)
+        # Create Sankey diagram for phase flow
+        if len(sources) > 0:
+            fig = go.Figure(data=[go.Sankey(
+                node=dict(
+                    pad=15,
+                    thickness=20,
+                    line=dict(color="black", width=0.5),
+                    label=phase_names,
+                    color=node_colors
+                ),
+                link=dict(
+                    source=sources,
+                    target=targets,
+                    value=values
+                )
+            )])
+            
+            fig.update_layout(
+                title_text="Phase Flow Diagram",
+                font_size=12,
+                height=300
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            # Fallback to a simple horizontal bar chart for phases
+            phase_df = pd.DataFrame({
+                'Phase': phase_names,
+                'Type': [phase["type"] for phase in phases],
+                'Rules': [phase["rules"] for phase in phases]
+            })
+            
+            fig = px.bar(
+                phase_df,
+                x='Phase',
+                y='Rules',
+                color='Type',
+                title="Phase Structure",
+                color_discrete_map={"Convergent": "#0066cc", "Divergent": "#cc6600"}
+            )
+            
+            fig.update_layout(height=300)
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No phases defined yet.")
     
     # Option to test the Meta-Resolver
     st.subheader("Test Meta-Resolver")
